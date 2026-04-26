@@ -8,8 +8,8 @@ const INPUT_TEMPLATE =
 const styles = {
   page: {
     minHeight: '100vh',
-    background: '#f6f7f9',
-    color: '#1a1a1a',
+    background: 'radial-gradient(ellipse at top, #14110a 0%, #0a0a0a 60%)',
+    color: '#e8e8e8',
     fontFamily:
       '-apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif',
     padding: '24px 16px',
@@ -29,49 +29,50 @@ const styles = {
     flexWrap: 'wrap',
     gap: 8,
   },
-  title: { fontSize: 22, fontWeight: 700, margin: 0 },
-  subtitle: { fontSize: 13, color: '#666', margin: 0 },
+  title: { fontSize: 24, fontWeight: 700, margin: 0, color: '#fbbf24', letterSpacing: 2 },
+  subtitle: { fontSize: 12, color: '#9ca3af', margin: 0, letterSpacing: 1 },
   card: {
-    background: '#fff',
-    border: '1px solid #e5e7eb',
+    background: 'linear-gradient(180deg, #1a1a1a 0%, #141414 100%)',
+    border: '1px solid #3a2f15',
     borderRadius: 12,
     padding: 20,
-    boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+    boxShadow: '0 2px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(212,160,23,0.08)',
   },
   fieldRow: { display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 },
-  label: { fontSize: 12, fontWeight: 600, color: '#444' },
+  label: { fontSize: 11, fontWeight: 700, color: '#d4a017', letterSpacing: 1 },
   catRow: { display: 'flex', flexWrap: 'wrap', gap: 8 },
   catBtn: (active) => ({
     padding: '8px 14px',
     borderRadius: 999,
-    border: '1px solid ' + (active ? '#111' : '#d1d5db'),
-    background: active ? '#111' : '#fff',
-    color: active ? '#fff' : '#333',
+    border: '1px solid ' + (active ? '#d4a017' : '#3a2f15'),
+    background: active ? '#d4a017' : '#1a1a1a',
+    color: active ? '#0a0a0a' : '#e8e8e8',
     fontSize: 13,
+    fontWeight: active ? 700 : 500,
     cursor: 'pointer',
   }),
   input: {
     width: '100%',
     padding: '10px 12px',
     borderRadius: 8,
-    border: '1px solid #d1d5db',
+    border: '1px solid #3a2f15',
     fontSize: 14,
     boxSizing: 'border-box',
-    background: '#fff',
-    color: '#1a1a1a',
+    background: '#0d0d0d',
+    color: '#e8e8e8',
     fontFamily: 'inherit',
   },
   textarea: {
     width: '100%',
     padding: '10px 12px',
     borderRadius: 8,
-    border: '1px solid #d1d5db',
+    border: '1px solid #3a2f15',
     fontSize: 14,
     minHeight: 120,
     resize: 'vertical',
     boxSizing: 'border-box',
-    background: '#fff',
-    color: '#1a1a1a',
+    background: '#0d0d0d',
+    color: '#e8e8e8',
     fontFamily: 'inherit',
   },
   uploadRow: { display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' },
@@ -80,7 +81,7 @@ const styles = {
     height: 80,
     objectFit: 'cover',
     borderRadius: 8,
-    border: '1px solid #e5e7eb',
+    border: '1px solid #3a2f15',
   },
   thumbWrap: { position: 'relative' },
   thumbRemove: {
@@ -91,8 +92,8 @@ const styles = {
     height: 20,
     borderRadius: '50%',
     border: 'none',
-    background: '#111',
-    color: '#fff',
+    background: '#d4a017',
+    color: '#0a0a0a',
     fontSize: 12,
     lineHeight: '20px',
     cursor: 'pointer',
@@ -101,41 +102,46 @@ const styles = {
   fileBtn: {
     padding: '8px 12px',
     borderRadius: 8,
-    border: '1px dashed #9ca3af',
-    background: '#fafafa',
+    border: '1px dashed #6b5a2a',
+    background: '#0d0d0d',
     fontSize: 13,
     cursor: 'pointer',
-    color: '#444',
+    color: '#9ca3af',
   },
   runBtn: (disabled) => ({
     padding: '12px 20px',
     borderRadius: 10,
-    border: 'none',
-    background: disabled ? '#bbb' : '#111',
-    color: '#fff',
+    border: '1px solid ' + (disabled ? '#3a2f15' : '#d4a017'),
+    background: disabled
+      ? '#1a1a1a'
+      : 'linear-gradient(180deg, #fbbf24 0%, #d4a017 100%)',
+    color: disabled ? '#6b7280' : '#0a0a0a',
     fontSize: 15,
-    fontWeight: 600,
+    fontWeight: 700,
+    letterSpacing: 1,
     cursor: disabled ? 'not-allowed' : 'pointer',
     width: '100%',
+    boxShadow: disabled ? 'none' : '0 2px 8px rgba(212,160,23,0.3)',
   }),
   resultBlock: {
-    background: '#fafafa',
-    border: '1px solid #eee',
+    background: '#0d0d0d',
+    border: '1px solid #3a2f15',
     borderRadius: 10,
     padding: 14,
     fontSize: 14,
     lineHeight: 1.6,
+    color: '#e8e8e8',
   },
-  resultLabel: { fontSize: 11, color: '#888', fontWeight: 600, marginBottom: 2 },
+  resultLabel: { fontSize: 11, color: '#d4a017', fontWeight: 700, marginBottom: 4, letterSpacing: 1 },
   historyItemDyn: (important, active) => ({
-    borderTop: '1px solid #f0f0f0',
+    borderTop: '1px solid #2a2418',
     padding: '12px 10px',
     fontSize: 13,
     lineHeight: 1.55,
-    background: important ? '#fffbeb' : 'transparent',
-    borderLeft: important ? '3px solid #facc15' : '3px solid transparent',
-    opacity: active ? 1 : 0.5,
-    color: active ? 'inherit' : '#9ca3af',
+    background: important ? 'rgba(212,160,23,0.08)' : 'transparent',
+    borderLeft: important ? '3px solid #d4a017' : '3px solid transparent',
+    opacity: active ? 1 : 0.45,
+    color: active ? '#e8e8e8' : '#6b7280',
     borderRadius: 4,
   }),
   badge: {
@@ -143,25 +149,27 @@ const styles = {
     fontSize: 11,
     padding: '2px 8px',
     borderRadius: 999,
-    background: '#eef2f7',
-    color: '#374151',
+    background: '#2a2418',
+    color: '#d4a017',
     marginRight: 8,
+    letterSpacing: 0.5,
   },
   badgeImportant: {
-    background: '#fde68a',
-    color: '#92400e',
+    background: '#d4a017',
+    color: '#0a0a0a',
     marginLeft: 4,
     marginRight: 0,
+    fontWeight: 700,
   },
-  meta: { color: '#888', fontSize: 11 },
-  emptyHistory: { color: '#999', fontSize: 13, padding: '8px 0' },
+  meta: { color: '#6b7280', fontSize: 11 },
+  emptyHistory: { color: '#6b7280', fontSize: 13, padding: '8px 0', fontStyle: 'italic' },
   tmplBtn: {
     fontSize: 12,
     padding: '4px 10px',
     borderRadius: 6,
-    border: '1px solid #d1d5db',
-    background: '#fff',
-    color: '#374151',
+    border: '1px solid #3a2f15',
+    background: '#0d0d0d',
+    color: '#d4a017',
     cursor: 'pointer',
   },
   flagRow: {
@@ -169,7 +177,7 @@ const styles = {
     gap: 14,
     marginTop: 6,
     fontSize: 12,
-    color: '#666',
+    color: '#9ca3af',
   },
   flagLabel: {
     display: 'inline-flex',
@@ -188,34 +196,35 @@ const styles = {
     padding: '6px 12px',
     fontSize: 12,
     borderRadius: 6,
-    border: '1px solid #eab308',
-    background: '#facc15',
-    color: '#7c2d12',
-    fontWeight: 600,
+    border: '1px solid #d4a017',
+    background: 'linear-gradient(180deg, #fbbf24 0%, #d4a017 100%)',
+    color: '#0a0a0a',
+    fontWeight: 700,
     cursor: 'pointer',
+    letterSpacing: 0.5,
   },
   quickBtnDiscard: {
     padding: '6px 12px',
     fontSize: 12,
     borderRadius: 6,
-    border: '1px solid #d1d5db',
-    background: '#e5e7eb',
-    color: '#374151',
+    border: '1px solid #3a2f15',
+    background: '#1a1a1a',
+    color: '#9ca3af',
     cursor: 'pointer',
   },
   quickBtnHold: {
     padding: '6px 12px',
     fontSize: 12,
     borderRadius: 6,
-    border: '1px solid #d1d5db',
-    background: '#fff',
-    color: '#6b7280',
+    border: '1px solid #3a2f15',
+    background: 'transparent',
+    color: '#9ca3af',
     cursor: 'pointer',
   },
   tabBar: {
     display: 'flex',
     gap: 4,
-    borderBottom: '1px solid #e5e7eb',
+    borderBottom: '1px solid #3a2f15',
     marginBottom: 4,
     overflowX: 'auto',
   },
@@ -223,16 +232,17 @@ const styles = {
     padding: '10px 16px',
     border: 'none',
     background: 'transparent',
-    color: active ? '#111' : '#6b7280',
+    color: active ? '#fbbf24' : '#9ca3af',
     fontWeight: active ? 700 : 500,
     fontSize: 14,
     cursor: 'pointer',
-    borderBottom: active ? '2px solid #111' : '2px solid transparent',
+    borderBottom: active ? '2px solid #d4a017' : '2px solid transparent',
     marginBottom: -1,
     whiteSpace: 'nowrap',
+    letterSpacing: 0.5,
   }),
   smokingItem: {
-    borderTop: '1px solid #f0f0f0',
+    borderTop: '1px solid #2a2418',
     padding: '10px 0',
     fontSize: 13,
     lineHeight: 1.55,
@@ -247,41 +257,52 @@ const styles = {
   primaryBtn: (disabled) => ({
     padding: '10px 16px',
     borderRadius: 8,
-    border: 'none',
-    background: disabled ? '#bbb' : '#111',
-    color: '#fff',
+    border: '1px solid ' + (disabled ? '#3a2f15' : '#d4a017'),
+    background: disabled
+      ? '#1a1a1a'
+      : 'linear-gradient(180deg, #fbbf24 0%, #d4a017 100%)',
+    color: disabled ? '#6b7280' : '#0a0a0a',
     fontSize: 14,
-    fontWeight: 600,
+    fontWeight: 700,
     cursor: disabled ? 'not-allowed' : 'pointer',
+    letterSpacing: 1,
   }),
   secondaryBtn: (disabled) => ({
     padding: '8px 14px',
     borderRadius: 8,
-    border: '1px solid #d1d5db',
-    background: '#fff',
-    color: disabled ? '#aaa' : '#374151',
+    border: '1px solid #3a2f15',
+    background: '#0d0d0d',
+    color: disabled ? '#6b7280' : '#d4a017',
     fontSize: 13,
     cursor: disabled ? 'not-allowed' : 'pointer',
   }),
   placeholder: {
-    color: '#9ca3af',
+    color: '#6b7280',
     fontSize: 14,
     padding: '40px 0',
     textAlign: 'center',
+    fontStyle: 'italic',
   },
   toast: {
     position: 'fixed',
     bottom: 24,
     left: '50%',
     transform: 'translateX(-50%)',
-    background: 'rgba(17, 17, 17, 0.92)',
-    color: '#fff',
-    padding: '8px 16px',
+    background: 'linear-gradient(180deg, #1a1a1a 0%, #0d0d0d 100%)',
+    color: '#fbbf24',
+    padding: '10px 20px',
     borderRadius: 999,
     fontSize: 13,
-    boxShadow: '0 4px 12px rgba(0,0,0,0.18)',
+    fontWeight: 600,
+    border: '1px solid #d4a017',
+    boxShadow: '0 4px 16px rgba(212,160,23,0.3)',
     zIndex: 9999,
     pointerEvents: 'none',
+    letterSpacing: 0.5,
+  },
+  deliberating: {
+    color: '#fbbf24',
+    animation: 'genroinPulse 1.4s ease-in-out infinite',
   },
 }
 
@@ -505,7 +526,7 @@ export default function GenroinConsole() {
           author: smokingForm.author.trim(),
         },
       })
-      showToast('投稿しました: ' + r.id)
+      showToast('奏上完了: ' + r.id)
       setSmokingForm({ content: '', tags: '', author: smokingForm.author })
       await loadSmokingList()
     } catch (e) {
@@ -524,9 +545,9 @@ export default function GenroinConsole() {
       const n = r.processed || 0
       const errN = (r.errors || []).length
       if (n === 0 && errN === 0) {
-        showToast('未処理ゼロ')
+        showToast('未処理なし')
       } else {
-        showToast('AI処理 ' + n + ' 件 (失敗' + errN + ')')
+        showToast(n + '件を議に付しました（失敗' + errN + '）')
       }
       await loadSmokingList()
     } catch (e) {
@@ -555,14 +576,14 @@ export default function GenroinConsole() {
           h.id === id ? { ...h, isImportant: true, isActive: true } : h,
         ),
       )
-      showToast('★ 重要に登録しました')
+      showToast('★ 勅令として記録')
     } else if (type === 'discard') {
       setHistory((prev) =>
         prev.map((h) => (h.id === id ? { ...h, isActive: false } : h)),
       )
-      showToast('破棄しました')
+      showToast('却下')
     } else if (type === 'hold') {
-      showToast('保留しました')
+      showToast('持ち越し')
     }
   }
 
@@ -632,18 +653,19 @@ export default function GenroinConsole() {
 
   return (
     <div style={styles.page}>
+      <style>{`@keyframes genroinPulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.5 } }`}</style>
       <div style={styles.container}>
         <div style={styles.header}>
-          <h1 style={styles.title}>元老院コンソール</h1>
-          <p style={styles.subtitle}>AI司令塔 — 指示・記録・判断の一元管理</p>
+          <h1 style={styles.title}>元 老 院</h1>
+          <p style={styles.subtitle}>御 前 会 議 — 裁可と記録の一元</p>
         </div>
 
         <div style={styles.tabBar}>
           {[
-            { key: 'judge', label: 'AI判断' },
-            { key: 'smoking', label: '喫煙所' },
-            { key: 'genroin', label: '元老院' },
-            { key: 'task', label: '案件' },
+            { key: 'judge', label: '即決（AI判断）' },
+            { key: 'smoking', label: '上奏（喫煙所）' },
+            { key: 'genroin', label: '議事（元老院）' },
+            { key: 'task', label: '勅命（案件）' },
           ].map((t) => (
             <button
               key={t.key}
@@ -674,7 +696,7 @@ export default function GenroinConsole() {
 
         <div style={styles.card}>
           <div style={styles.fieldRow}>
-            <span style={styles.label}>カテゴリ</span>
+            <span style={styles.label}>議題</span>
             <div style={styles.catRow}>
               {CATEGORIES.map((c) => (
                 <button
@@ -690,13 +712,13 @@ export default function GenroinConsole() {
           </div>
 
           <div style={styles.fieldRow}>
-            <span style={styles.label}>案件名（自動生成・編集可）</span>
+            <span style={styles.label}>議題名（自動生成・編集可）</span>
             <input
               type="text"
               style={styles.input}
               value={title}
               onChange={handleTitleChange}
-              placeholder="入力すると自動で生成されます"
+              placeholder="上奏内容より自動生成"
             />
           </div>
 
@@ -709,25 +731,25 @@ export default function GenroinConsole() {
                 gap: 8,
               }}
             >
-              <span style={styles.label}>入力</span>
+              <span style={styles.label}>上奏内容</span>
               <button
                 type="button"
                 onClick={handleInsertTemplate}
                 style={styles.tmplBtn}
               >
-                ＋ テンプレ挿入
+                ＋ 定型奏上
               </button>
             </div>
             <textarea
               style={styles.textarea}
               value={input}
               onChange={handleInputChange}
-              placeholder="案件・相談内容を自由記入"
+              placeholder="御諮問の趣旨を述べよ"
             />
           </div>
 
           <div style={styles.fieldRow}>
-            <span style={styles.label}>画像（最大3枚・プレビューのみ）</span>
+            <span style={styles.label}>添付（最大3枚・プレビューのみ）</span>
             <div style={styles.uploadRow}>
               {images.map((src, i) => (
                 <div key={i} style={styles.thumbWrap}>
@@ -744,7 +766,7 @@ export default function GenroinConsole() {
               ))}
               {images.length < 3 && (
                 <label style={styles.fileBtn}>
-                  ＋ 画像を追加
+                  ＋ 添付追加
                   <input
                     type="file"
                     accept="image/*"
@@ -763,28 +785,32 @@ export default function GenroinConsole() {
             disabled={!canRun}
             onClick={handleRun}
           >
-            {loading ? '実行中…' : '実行'}
+            {loading ? (
+              <span style={styles.deliberating}>審議中…</span>
+            ) : (
+              '裁可（実行）'
+            )}
           </button>
         </div>
 
         {result && (
           <div style={styles.card}>
-            <div style={{ ...styles.label, marginBottom: 10 }}>結果</div>
+            <div style={{ ...styles.label, marginBottom: 10 }}>裁可</div>
             <div style={{ marginBottom: 8 }}>
               <span style={styles.badge}>{result.category}</span>
               <strong>{result.title}</strong>
               <span style={{ ...styles.meta, marginLeft: 8 }}>{result.timestamp}</span>
             </div>
             <div style={{ ...styles.resultBlock, marginBottom: 10 }}>
-              <div style={styles.resultLabel}>判断（提案）</div>
+              <div style={styles.resultLabel}>御見立</div>
               {result.judgment}
             </div>
             <div style={{ ...styles.resultBlock, marginBottom: 10 }}>
-              <div style={styles.resultLabel}>結論</div>
+              <div style={styles.resultLabel}>御沙汰</div>
               {result.conclusion}
             </div>
             <div style={styles.resultBlock}>
-              <div style={styles.resultLabel}>理由</div>
+              <div style={styles.resultLabel}>仰せの理</div>
               {result.reason}
             </div>
             <div style={styles.quickRow}>
@@ -793,21 +819,21 @@ export default function GenroinConsole() {
                 style={styles.quickBtnImportant}
                 onClick={() => applyQuickAction(result.id, 'important')}
               >
-                ★ 重要にする
+                ★ 勅令認定
               </button>
               <button
                 type="button"
                 style={styles.quickBtnDiscard}
                 onClick={() => applyQuickAction(result.id, 'discard')}
               >
-                破棄
+                却下
               </button>
               <button
                 type="button"
                 style={styles.quickBtnHold}
                 onClick={() => applyQuickAction(result.id, 'hold')}
               >
-                保留
+                持ち越し
               </button>
             </div>
           </div>
@@ -815,10 +841,10 @@ export default function GenroinConsole() {
 
         <div style={styles.card}>
           <div style={{ ...styles.label, marginBottom: 6 }}>
-            履歴（最新{Math.min(history.length, 50)}件 / 最大50）
+            議事録（最新{Math.min(history.length, 50)}件 / 最大50）
           </div>
           {history.length === 0 ? (
-            <div style={styles.emptyHistory}>まだ履歴はありません</div>
+            <div style={styles.emptyHistory}>議事録なし</div>
           ) : (
             history.map((h, i) => {
               const isActive = h.isActive !== false
@@ -833,7 +859,7 @@ export default function GenroinConsole() {
                     <strong>{h.title}</strong>
                     {isImportant && (
                       <span style={{ ...styles.badge, ...styles.badgeImportant }}>
-                        ★重要
+                        ★勅令
                       </span>
                     )}
                     <span style={{ ...styles.meta, marginLeft: 8 }}>
@@ -841,7 +867,7 @@ export default function GenroinConsole() {
                     </span>
                     {h.image_count > 0 && (
                       <span style={{ ...styles.meta, marginLeft: 8 }}>
-                        画像{h.image_count}枚
+                        添付{h.image_count}枚
                       </span>
                     )}
                   </div>
@@ -857,7 +883,7 @@ export default function GenroinConsole() {
                         onChange={() => toggleFlag(h.id, 'isImportant')}
                         disabled={!h.id}
                       />
-                      重要
+                      勅令
                     </label>
                     <label style={styles.flagLabel}>
                       <input
@@ -866,7 +892,7 @@ export default function GenroinConsole() {
                         onChange={() => toggleFlag(h.id, 'isActive')}
                         disabled={!h.id}
                       />
-                      検索対象
+                      議題対象
                     </label>
                   </div>
                 </div>
@@ -881,18 +907,18 @@ export default function GenroinConsole() {
           <>
             <div style={styles.card}>
               <div style={styles.fieldRow}>
-                <span style={styles.label}>内容</span>
+                <span style={styles.label}>上奏文</span>
                 <textarea
                   style={styles.textarea}
                   value={smokingForm.content}
                   onChange={(e) =>
                     setSmokingForm({ ...smokingForm, content: e.target.value })
                   }
-                  placeholder="思いついたこと・課題・アイデアを自由に投稿"
+                  placeholder="思案・課題・献策を自由に上奏せよ"
                 />
               </div>
               <div style={styles.fieldRow}>
-                <span style={styles.label}>タグ（カンマ区切り任意）</span>
+                <span style={styles.label}>印（カンマ区切り任意）</span>
                 <input
                   type="text"
                   style={styles.input}
@@ -904,7 +930,7 @@ export default function GenroinConsole() {
                 />
               </div>
               <div style={styles.fieldRow}>
-                <span style={styles.label}>投稿者</span>
+                <span style={styles.label}>上奏者</span>
                 <input
                   type="text"
                   style={styles.input}
@@ -912,7 +938,7 @@ export default function GenroinConsole() {
                   onChange={(e) =>
                     setSmokingForm({ ...smokingForm, author: e.target.value })
                   }
-                  placeholder="名前"
+                  placeholder="氏名"
                 />
               </div>
               <div style={styles.rowActions}>
@@ -924,7 +950,11 @@ export default function GenroinConsole() {
                   disabled={!smokingForm.content.trim() || smokingPosting}
                   onClick={handleSmokingPost}
                 >
-                  {smokingPosting ? '投稿中…' : '投稿'}
+                  {smokingPosting ? (
+                    <span style={styles.deliberating}>奏上中…</span>
+                  ) : (
+                    '投稿（奏上）'
+                  )}
                 </button>
                 <button
                   type="button"
@@ -932,7 +962,11 @@ export default function GenroinConsole() {
                   disabled={smokingProcessing}
                   onClick={handleSmokingProcess}
                 >
-                  {smokingProcessing ? 'AI処理中…' : 'AI処理（未処理を一括構造化）'}
+                  {smokingProcessing ? (
+                    <span style={styles.deliberating}>議事中…</span>
+                  ) : (
+                    'AI処理（議事）'
+                  )}
                 </button>
               </div>
             </div>
@@ -947,7 +981,7 @@ export default function GenroinConsole() {
                 }}
               >
                 <div style={styles.label}>
-                  未処理一覧（{smokingList.length}件）
+                  未処理上奏（{smokingList.length}）
                 </div>
                 <button
                   type="button"
@@ -955,12 +989,12 @@ export default function GenroinConsole() {
                   disabled={smokingListLoading}
                   onClick={loadSmokingList}
                 >
-                  {smokingListLoading ? '読込中…' : '再読込'}
+                  {smokingListLoading ? '閲覧中…' : '再閲覧'}
                 </button>
               </div>
               {smokingList.length === 0 ? (
                 <div style={styles.emptyHistory}>
-                  {smokingListLoading ? '読み込み中…' : '未処理はありません'}
+                  {smokingListLoading ? '閲覧中…' : '未処理なし'}
                 </div>
               ) : (
                 smokingList.map((s, i) => (
@@ -979,7 +1013,7 @@ export default function GenroinConsole() {
                         </span>
                       )}
                     </div>
-                    <div style={{ color: '#333', marginTop: 2 }}>
+                    <div style={{ color: '#e8e8e8', marginTop: 2 }}>
                       {s['内容']}
                     </div>
                   </div>
@@ -992,9 +1026,7 @@ export default function GenroinConsole() {
         {activeTab === 'genroin' && (
           <div style={styles.card}>
             <div style={styles.placeholder}>
-              元老院タブは Phase 3 で実装します。
-              <br />
-              現在は GAS 直接（list action）でデータ確認可能。
+              議事の間 — Phase 3 にて開廷予定
             </div>
           </div>
         )}
@@ -1002,7 +1034,7 @@ export default function GenroinConsole() {
         {activeTab === 'task' && (
           <div style={styles.card}>
             <div style={styles.placeholder}>
-              案件タブは Phase 3 で実装します。
+              勅命の間 — Phase 3 にて開設予定
             </div>
           </div>
         )}
