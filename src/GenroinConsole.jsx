@@ -344,13 +344,24 @@ function buildStyles(g) {
     // ============ ON: 黒+金 フル ============
     return {
       ...baseStyles,
+      page: {
+        ...baseStyles.page,
+        background:
+          'radial-gradient(circle at 50% 0%, rgba(251,191,36,0.10), transparent 45%), ' +
+          'radial-gradient(circle at 0% 100%, rgba(59,130,246,0.08), transparent 45%), ' +
+          'radial-gradient(circle at 100% 100%, rgba(212,160,23,0.05), transparent 40%), ' +
+          '#000',
+      },
       title: { ...baseStyles.title, color: '#fbbf24', letterSpacing: 2 },
       subtitle: { ...baseStyles.subtitle, color: '#9ca3af', letterSpacing: 1 },
       card: {
         ...baseStyles.card,
-        background: 'linear-gradient(180deg, #1a1a1a 0%, #141414 100%)',
-        border: '1px solid #3a2f15',
-        boxShadow: '0 2px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(212,160,23,0.08)',
+        background:
+          'linear-gradient(180deg, rgba(26,26,26,0.92) 0%, rgba(20,20,20,0.92) 100%)',
+        border: '1px solid rgba(251,191,36,0.25)',
+        boxShadow:
+          '0 0 24px rgba(251,191,36,0.10), inset 0 1px 0 rgba(212,160,23,0.08)',
+        backdropFilter: 'blur(4px)',
       },
       label: { ...baseStyles.label, color: '#d4a017', letterSpacing: 1 },
       resultLabel: { ...baseStyles.resultLabel, color: '#d4a017', letterSpacing: 1 },
@@ -523,10 +534,16 @@ function LeftPanelGenroin({ stats }) {
   )
 }
 
-function RightPanelGenroin({ recent, summary }) {
+function RightPanelGenroin({ recent, summary, suggestion }) {
   return (
     <div className="panel genroin">
-      <h3>議事ログ</h3>
+      <h3>AI進言</h3>
+      {suggestion ? (
+        <div className="ai-box">{suggestion}</div>
+      ) : (
+        <div style={{ opacity: 0.5, fontSize: 12 }}>分析中...</div>
+      )}
+      <h3 style={{ marginTop: 20 }}>議事ログ</h3>
       <ul className="log">
         {recent.length === 0 ? (
           <li style={{ opacity: 0.5 }}>記録なし</li>
@@ -536,35 +553,48 @@ function RightPanelGenroin({ recent, summary }) {
           ))
         )}
       </ul>
-      <h3 style={{ marginTop: 20 }}>AI補助</h3>
+      <h3 style={{ marginTop: 20 }}>優先度</h3>
       <p style={{ fontSize: 12, opacity: 0.85, margin: 0 }}>{summary}</p>
     </div>
   )
 }
 
 const layoutCss = `
-.layout { display: flex; gap: 16px; max-width: 1360px; margin: 0 auto; padding: 0 16px; box-sizing: border-box; }
-.side { width: 240px; flex-shrink: 0; }
-.main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
-.panel { padding: 16px; border-radius: 12px; }
+/* 支配型レイアウト */
+.layout { display: flex; gap: 20px; max-width: 1800px; margin: 0 auto; padding: 0 20px; box-sizing: border-box; justify-content: center; }
+.side { width: 260px; flex-shrink: 0; }
+.main { flex: 1; max-width: 1100px; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+
+/* パネル共通 */
+.panel { padding: 18px; border-radius: 12px; }
 .panel h3 { margin: 0 0 12px; font-size: 13px; font-weight: 700; letter-spacing: 0.5px; }
 .panel textarea { width: 100%; min-height: 80px; border-radius: 6px; padding: 8px; font-family: inherit; font-size: 13px; box-sizing: border-box; resize: vertical; }
 .panel ul { list-style: none; padding: 0; margin: 0; font-size: 13px; line-height: 1.7; }
 .panel ul li { padding: 4px 0; }
-.stat { display: flex; justify-content: space-between; margin: 6px 0; font-size: 13px; }
-.stat b { font-variant-numeric: tabular-nums; }
+.stat { display: flex; justify-content: space-between; margin: 8px 0; font-size: 13px; }
+.stat b { font-variant-numeric: tabular-nums; font-size: 16px; }
+
+/* OFF 通常モード */
 .side.off .panel { background: #ffffff; border: 1px solid #e5e7eb; color: #1a1a1a; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
 .side.off .panel h3 { color: #444; }
 .side.off .panel textarea { border: 1px solid #d1d5db; background: #ffffff; color: #1a1a1a; }
 .side.off .panel ul li { border-bottom: 1px solid #f0f0f0; }
-.side.on .panel { background: rgba(0,0,0,0.78); border: 1px solid #d4a017; color: #f5f5f5; box-shadow: 0 2px 12px rgba(212,160,23,0.12); }
+
+/* ON 元老院モード — backdrop-filter で浮く */
+.side.on .panel { background: rgba(10,10,10,0.65); border: 1px solid rgba(251,191,36,0.5); color: #f5f5f5; box-shadow: 0 0 12px rgba(251,191,36,0.12); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
 .side.on .panel h3 { color: #fbbf24; letter-spacing: 1.5px; }
 .side.on .panel textarea { border: 1px solid #3a2f15; background: #0d0d0d; color: #e8e8e8; }
 .side.on .panel ul li { border-bottom: 1px solid rgba(212,160,23,0.15); }
+
+/* スキャンライン */
 .scan-line { margin-top: 20px; height: 2px; background: linear-gradient(90deg, transparent, #fbbf24, transparent); animation: genroinScan 2.4s linear infinite; }
 .log { opacity: 0.9; }
+
+/* AI進言ボックス */
+.ai-box { border: 1px solid #fbbf24; padding: 12px; font-size: 13px; line-height: 1.6; background: rgba(0,0,0,0.6); box-shadow: 0 0 10px rgba(251,191,36,0.2); border-radius: 6px; color: #fef3c7; }
+
 @keyframes genroinScan { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
-@media (max-width: 1100px) { .side { display: none; } .layout { padding: 0 12px; } }
+@media (max-width: 1100px) { .side { display: none; } .layout { padding: 0 12px; max-width: 100%; } .main { min-width: 0; } }
 `
 
 function autoTitle(text, category) {
@@ -820,6 +850,7 @@ export default function GenroinConsole() {
   const [logOpenId, setLogOpenId] = useState(null) // taskId whose log form is open
   const [logForm, setLogForm] = useState({ result: '', success: '', learning: '' })
   const [logBusy, setLogBusy] = useState(false)
+
 
   const handleInputChange = (e) => {
     const v = e.target.value
@@ -1116,6 +1147,25 @@ export default function GenroinConsole() {
       setLoading(false)
     }
   }
+
+  const aiSuggestion = (() => {
+    const high = genroinList.filter((x) => x['優先度'] === 'A')
+    const pending = smokingList.length
+    const undecided = genroinList.filter((x) => !x['採用可否']).length
+    if (high.length > 0) {
+      return '優先度Aの議題が ' + high.length + ' 件。即時裁可を推奨。'
+    }
+    if (pending > 0) {
+      return '未処理上奏が ' + pending + ' 件。議事処理を推奨。'
+    }
+    if (undecided > 0) {
+      return '未決の議題が ' + undecided + ' 件。Yes/No決定を推奨。'
+    }
+    if (taskList.length === 0) {
+      return '勅命が存在しません。新規案件創出を推奨。'
+    }
+    return '現状は安定。改善案の探索を推奨。'
+  })()
 
   const canRun = input.trim().length > 0 && !loading
 
@@ -1935,7 +1985,11 @@ export default function GenroinConsole() {
 
         <aside className={'side right ' + (genroinMode ? 'on' : 'off')}>
           {genroinMode ? (
-            <RightPanelGenroin recent={sideRecent} summary={sideSummary} />
+            <RightPanelGenroin
+              recent={sideRecent}
+              summary={sideSummary}
+              suggestion={aiSuggestion}
+            />
           ) : (
             <RightPanelNormal history={history} />
           )}
