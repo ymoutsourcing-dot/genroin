@@ -236,10 +236,11 @@ const styles = {
     fontWeight: active ? 700 : 500,
     fontSize: 14,
     cursor: 'pointer',
-    borderBottom: active ? '2px solid #d4a017' : '2px solid transparent',
+    borderBottom: active ? '3px solid #fbbf24' : '3px solid transparent',
     marginBottom: -1,
     whiteSpace: 'nowrap',
     letterSpacing: 0.5,
+    textShadow: active ? '0 0 8px rgba(251,191,36,0.4)' : 'none',
   }),
   smokingItem: {
     borderTop: '1px solid #2a2418',
@@ -303,6 +304,25 @@ const styles = {
   deliberating: {
     color: '#fbbf24',
     animation: 'genroinPulse 1.4s ease-in-out infinite',
+  },
+  loadingLineWrap: {
+    position: 'relative',
+    width: 80,
+    height: 2,
+    marginTop: 6,
+    overflow: 'hidden',
+    borderRadius: 1,
+    background: 'rgba(212,160,23,0.15)',
+  },
+  loadingLine: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '50%',
+    height: '100%',
+    background:
+      'linear-gradient(90deg, transparent, #fbbf24, transparent)',
+    animation: 'genroinSlide 1.2s linear infinite',
   },
 }
 
@@ -653,7 +673,10 @@ export default function GenroinConsole() {
 
   return (
     <div style={styles.page}>
-      <style>{`@keyframes genroinPulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.5 } }`}</style>
+      <style>{`
+        @keyframes genroinPulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.5 } }
+        @keyframes genroinSlide { 0% { left: -50% } 100% { left: 100% } }
+      `}</style>
       <div style={styles.container}>
         <div style={styles.header}>
           <h1 style={styles.title}>元 老 院</h1>
@@ -786,7 +809,19 @@ export default function GenroinConsole() {
             onClick={handleRun}
           >
             {loading ? (
-              <span style={styles.deliberating}>審議中…</span>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 0,
+                }}
+              >
+                <span style={styles.deliberating}>審議中…</span>
+                <span style={styles.loadingLineWrap}>
+                  <span style={styles.loadingLine} />
+                </span>
+              </span>
             ) : (
               '裁可（実行）'
             )}
@@ -803,7 +838,31 @@ export default function GenroinConsole() {
             </div>
             <div style={{ ...styles.resultBlock, marginBottom: 10 }}>
               <div style={styles.resultLabel}>御見立</div>
-              {result.judgment}
+              {(() => {
+                const j = String(result.judgment || '').toUpperCase()
+                const isOK = j === 'OK'
+                const isNG = j === 'NG'
+                const label = isOK ? '可' : isNG ? '不可' : result.judgment
+                const fg = isOK ? '#34d399' : isNG ? '#f87171' : '#e8e8e8'
+                return (
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      padding: '6px 18px',
+                      borderRadius: 6,
+                      background: '#0a0a0a',
+                      border: '1px solid #d4a017',
+                      color: fg,
+                      fontWeight: 700,
+                      fontSize: 16,
+                      letterSpacing: 4,
+                      boxShadow: '0 0 12px rgba(212,160,23,0.2)',
+                    }}
+                  >
+                    {label}
+                  </span>
+                )
+              })()}
             </div>
             <div style={{ ...styles.resultBlock, marginBottom: 10 }}>
               <div style={styles.resultLabel}>御沙汰</div>
@@ -951,7 +1010,18 @@ export default function GenroinConsole() {
                   onClick={handleSmokingPost}
                 >
                   {smokingPosting ? (
-                    <span style={styles.deliberating}>奏上中…</span>
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <span style={styles.deliberating}>奏上中…</span>
+                      <span style={styles.loadingLineWrap}>
+                        <span style={styles.loadingLine} />
+                      </span>
+                    </span>
                   ) : (
                     '投稿（奏上）'
                   )}
@@ -963,7 +1033,18 @@ export default function GenroinConsole() {
                   onClick={handleSmokingProcess}
                 >
                   {smokingProcessing ? (
-                    <span style={styles.deliberating}>議事中…</span>
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <span style={styles.deliberating}>議事中…</span>
+                      <span style={styles.loadingLineWrap}>
+                        <span style={styles.loadingLine} />
+                      </span>
+                    </span>
                   ) : (
                     'AI処理（議事）'
                   )}
