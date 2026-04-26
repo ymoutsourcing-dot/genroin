@@ -479,6 +479,94 @@ function buildStyles(g) {
   }
 }
 
+// ============ サイドパネル ============
+
+function LeftPanelNormal({ stats }) {
+  return (
+    <div className="panel">
+      <h3>状況</h3>
+      <div className="stat"><span>未処理</span><b>{stats.unprocessed}</b></div>
+      <div className="stat"><span>進行中</span><b>{stats.inProgress}</b></div>
+      <div className="stat"><span>完了</span><b>{stats.done}</b></div>
+    </div>
+  )
+}
+
+function RightPanelNormal({ history }) {
+  return (
+    <div className="panel">
+      <h3>クイックメモ</h3>
+      <textarea placeholder="メモ..." />
+      <h3 style={{ marginTop: 20 }}>履歴</h3>
+      <ul>
+        {history.length === 0 ? (
+          <li style={{ opacity: 0.5 }}>まだありません</li>
+        ) : (
+          history.slice(0, 5).map((h, i) => (
+            <li key={h.id || i}>{(h.title || '').slice(0, 24)}</li>
+          ))
+        )}
+      </ul>
+    </div>
+  )
+}
+
+function LeftPanelGenroin({ stats }) {
+  return (
+    <div className="panel genroin">
+      <h3>戦況</h3>
+      <div className="stat"><span>議題</span><b>{stats.genroin}</b></div>
+      <div className="stat"><span>勅命</span><b>{stats.task}</b></div>
+      <div className="stat"><span>保留</span><b>{stats.unprocessed}</b></div>
+      <div className="scan-line" />
+    </div>
+  )
+}
+
+function RightPanelGenroin({ recent, summary }) {
+  return (
+    <div className="panel genroin">
+      <h3>議事ログ</h3>
+      <ul className="log">
+        {recent.length === 0 ? (
+          <li style={{ opacity: 0.5 }}>記録なし</li>
+        ) : (
+          recent.slice(0, 5).map((r, i) => (
+            <li key={r.id || i}>{r.label}</li>
+          ))
+        )}
+      </ul>
+      <h3 style={{ marginTop: 20 }}>AI補助</h3>
+      <p style={{ fontSize: 12, opacity: 0.85, margin: 0 }}>{summary}</p>
+    </div>
+  )
+}
+
+const layoutCss = `
+.layout { display: flex; gap: 16px; max-width: 1360px; margin: 0 auto; padding: 0 16px; box-sizing: border-box; }
+.side { width: 240px; flex-shrink: 0; }
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+.panel { padding: 16px; border-radius: 12px; }
+.panel h3 { margin: 0 0 12px; font-size: 13px; font-weight: 700; letter-spacing: 0.5px; }
+.panel textarea { width: 100%; min-height: 80px; border-radius: 6px; padding: 8px; font-family: inherit; font-size: 13px; box-sizing: border-box; resize: vertical; }
+.panel ul { list-style: none; padding: 0; margin: 0; font-size: 13px; line-height: 1.7; }
+.panel ul li { padding: 4px 0; }
+.stat { display: flex; justify-content: space-between; margin: 6px 0; font-size: 13px; }
+.stat b { font-variant-numeric: tabular-nums; }
+.side.off .panel { background: #ffffff; border: 1px solid #e5e7eb; color: #1a1a1a; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.side.off .panel h3 { color: #444; }
+.side.off .panel textarea { border: 1px solid #d1d5db; background: #ffffff; color: #1a1a1a; }
+.side.off .panel ul li { border-bottom: 1px solid #f0f0f0; }
+.side.on .panel { background: rgba(0,0,0,0.78); border: 1px solid #d4a017; color: #f5f5f5; box-shadow: 0 2px 12px rgba(212,160,23,0.12); }
+.side.on .panel h3 { color: #fbbf24; letter-spacing: 1.5px; }
+.side.on .panel textarea { border: 1px solid #3a2f15; background: #0d0d0d; color: #e8e8e8; }
+.side.on .panel ul li { border-bottom: 1px solid rgba(212,160,23,0.15); }
+.scan-line { margin-top: 20px; height: 2px; background: linear-gradient(90deg, transparent, #fbbf24, transparent); animation: genroinScan 2.4s linear infinite; }
+.log { opacity: 0.9; }
+@keyframes genroinScan { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+@media (max-width: 1100px) { .side { display: none; } .layout { padding: 0 12px; } }
+`
+
 function autoTitle(text, category) {
   const trimmed = (text || '').trim().replace(/\s+/g, ' ')
   if (!trimmed) return ''
@@ -1031,13 +1119,53 @@ export default function GenroinConsole() {
 
   const canRun = input.trim().length > 0 && !loading
 
+  // サイドパネル用の集計値
+  const sideStats = {
+    unprocessed: smokingList.length,
+    inProgress: taskList.filter((t) => t['ステータス'] === '進行中').length,
+    done: taskList.filter((t) => t['ステータス'] === '完了').length,
+    genroin: genroinList.length,
+    task: taskList.length,
+  }
+  const sideRecent = [
+    ...genroinList.slice(0, 3).map((g) => ({
+      id: g['元老院ID'],
+      label:
+        (g['タイトル'] || '').slice(0, 16) + ' → ' + (g['採用可否'] || '未決'),
+    })),
+    ...taskList.slice(0, 2).map((t) => ({
+      id: t['案件ID'],
+      label:
+        (t['タイトル'] || '').slice(0, 16) + ' / ' + (t['ステータス'] || '未着手'),
+    })),
+  ]
+  const sideSummary = (() => {
+    if (genroinList.length === 0) return '判断データなし'
+    const c = { A: 0, B: 0, C: 0 }
+    genroinList.forEach((g) => {
+      if (c[g['優先度']] !== undefined) c[g['優先度']]++
+    })
+    const top = ['A', 'B', 'C'].reduce((a, b) => (c[a] >= c[b] ? a : b))
+    return '優先度 ' + top + ' が ' + c[top] + ' 件 多数'
+  })()
+
   return (
     <div style={styles.page}>
       <style>{`
         @keyframes genroinPulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.5 } }
         @keyframes genroinSlide { 0% { left: -50% } 100% { left: 100% } }
+        ${layoutCss}
       `}</style>
-      <div style={styles.container}>
+      <div className="layout">
+        <aside className={'side left ' + (genroinMode ? 'on' : 'off')}>
+          {genroinMode ? (
+            <LeftPanelGenroin stats={sideStats} />
+          ) : (
+            <LeftPanelNormal stats={sideStats} />
+          )}
+        </aside>
+
+        <main className="main">
         <div style={styles.header}>
           <div>
             <h1 style={styles.title}>{T('元 老 院', '元老院')}</h1>
@@ -1803,6 +1931,15 @@ export default function GenroinConsole() {
             )}
           </div>
         )}
+        </main>
+
+        <aside className={'side right ' + (genroinMode ? 'on' : 'off')}>
+          {genroinMode ? (
+            <RightPanelGenroin recent={sideRecent} summary={sideSummary} />
+          ) : (
+            <RightPanelNormal history={history} />
+          )}
+        </aside>
       </div>
       {toast && <div style={styles.toast}>{toast}</div>}
     </div>
