@@ -503,7 +503,7 @@ function LeftPanelNormal({ stats }) {
   )
 }
 
-function RightPanelNormal({ history }) {
+function RightPanelNormal({ history, backupProps }) {
   return (
     <div className="panel">
       <h3>クイックメモ</h3>
@@ -518,6 +518,7 @@ function RightPanelNormal({ history }) {
           ))
         )}
       </ul>
+      <BackupSection {...backupProps} />
     </div>
   )
 }
@@ -534,7 +535,7 @@ function LeftPanelGenroin({ stats }) {
   )
 }
 
-function RightPanelGenroin({ recent, summary, suggestion, fallback, loading, error, onRefresh }) {
+function RightPanelGenroin({ recent, summary, suggestion, fallback, loading, error, onRefresh, backupProps }) {
   return (
     <div className="panel genroin">
       <div
@@ -619,7 +620,110 @@ function RightPanelGenroin({ recent, summary, suggestion, fallback, loading, err
       </ul>
       <h3 style={{ marginTop: 20 }}>優先度</h3>
       <p style={{ fontSize: 12, opacity: 0.85, margin: 0 }}>{summary}</p>
+      <BackupSection {...backupProps} />
     </div>
+  )
+}
+
+function formatBackupName(b) {
+  // genroin_backup_20260427_103000.json → 04/27 10:30:00
+  const m = String(b.name || '').match(/(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/)
+  if (m) return m[2] + '/' + m[3] + ' ' + m[4] + ':' + m[5]
+  return formatTimestamp(b.date)
+}
+
+function BackupSection({ backups, loading, busy, restoreBusy, onLoad, onCreate, onRestore }) {
+  return (
+    <>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginTop: 20,
+          marginBottom: 8,
+        }}
+      >
+        <h3 style={{ margin: 0 }}>💾 バックアップ</h3>
+        <div style={{ display: 'flex', gap: 4 }}>
+          <button
+            type="button"
+            onClick={() => onCreate('manual')}
+            disabled={busy}
+            style={{
+              fontSize: 11,
+              padding: '2px 8px',
+              borderRadius: 4,
+              cursor: busy ? 'not-allowed' : 'pointer',
+              background: 'transparent',
+              border: '1px solid currentColor',
+              color: 'inherit',
+              opacity: busy ? 0.5 : 1,
+            }}
+          >
+            {busy ? '作成中…' : '＋作成'}
+          </button>
+          <button
+            type="button"
+            onClick={onLoad}
+            disabled={loading}
+            style={{
+              fontSize: 11,
+              padding: '2px 8px',
+              borderRadius: 4,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              background: 'transparent',
+              border: '1px solid currentColor',
+              color: 'inherit',
+              opacity: loading ? 0.5 : 1,
+            }}
+          >
+            {loading ? '↻' : '↻'}
+          </button>
+        </div>
+      </div>
+      <ul>
+        {backups.length === 0 ? (
+          <li style={{ opacity: 0.5, fontSize: 12 }}>
+            {loading ? '取得中…' : 'バックアップなし'}
+          </li>
+        ) : (
+          backups.slice(0, 8).map((b) => (
+            <li
+              key={b.id}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <span style={{ fontSize: 11, opacity: 0.85, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {formatBackupName(b)}
+              </span>
+              <button
+                type="button"
+                onClick={() => onRestore(b.id, b.name)}
+                disabled={restoreBusy}
+                style={{
+                  fontSize: 10,
+                  padding: '2px 6px',
+                  borderRadius: 3,
+                  cursor: restoreBusy ? 'not-allowed' : 'pointer',
+                  background: 'transparent',
+                  border: '1px solid currentColor',
+                  color: 'inherit',
+                  opacity: restoreBusy ? 0.4 : 1,
+                  flexShrink: 0,
+                }}
+              >
+                復元
+              </button>
+            </li>
+          ))
+        )}
+      </ul>
+    </>
   )
 }
 
@@ -919,6 +1023,12 @@ export default function GenroinConsole() {
   const [aiSuggestion, setAiSuggestion] = useState(null)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
+
+  // バックアップ
+  const [backups, setBackups] = useState([])
+  const [backupsLoading, setBackupsLoading] = useState(false)
+  const [backupBusy, setBackupBusy] = useState(false)
+  const [restoreBusy, setRestoreBusy] = useState(false)
 
 
   const handleInputChange = (e) => {
@@ -1240,6 +1350,73 @@ export default function GenroinConsole() {
     if (taskList.length === 0) return '勅命が存在しません。新規案件創出を推奨。'
     return '現状は安定。改善案の探索を推奨。'
   })()
+
+  const loadBackups = async () => {
+    setBackupsLoading(true)
+    setError('')
+    try {
+      const r = await callGAS('listBackups')
+      setBackups(Array.isArray(r.files) ? r.files : [])
+    } catch (e) {
+      setError(e?.message || 'バックアップ一覧取得失敗')
+    } finally {
+      setBackupsLoading(false)
+    }
+  }
+
+  const createBackup = async (note) => {
+    if (backupBusy) return
+    setBackupBusy(true)
+    setError('')
+    try {
+      const r = await callGAS('backup', { note: note || '' })
+      showToast('バックアップ作成: ' + r.name)
+      await loadBackups()
+      return r
+    } catch (e) {
+      setError(e?.message || 'バックアップ失敗')
+      throw e
+    } finally {
+      setBackupBusy(false)
+    }
+  }
+
+  const restoreBackup = async (fileId, fileName) => {
+    if (restoreBusy) return
+    if (!window.confirm(
+      '復元しますか？\n\n対象: ' + fileName +
+      '\n\n現在のシートは全て上書きされます。\n（自動で事前バックアップを取ります）'
+    )) return
+    setRestoreBusy(true)
+    setError('')
+    try {
+      // 事前自動バックアップ（保険）
+      try {
+        await createBackup('auto-pre-restore')
+      } catch (e) {
+        // 事前バックアップ失敗時、ユーザーに継続するか確認
+        if (!window.confirm('事前バックアップに失敗しました：\n' + (e?.message || '') + '\n\nそれでも復元を続けますか？')) {
+          setRestoreBusy(false)
+          return
+        }
+      }
+      const r = await callGAS('restore', { fileId })
+      showToast('復元完了: ' + (r.sourceName || fileName))
+      // 全リスト再読込
+      setSmokingList([])
+      setGenroinList([])
+      setTaskList([])
+      setAiSuggestion(null)
+      if (activeTab === 'smoking') await loadSmokingList()
+      if (activeTab === 'genroin') await loadGenroinList()
+      if (activeTab === 'task') await loadTaskList()
+      await loadBackups()
+    } catch (e) {
+      setError(e?.message || '復元失敗')
+    } finally {
+      setRestoreBusy(false)
+    }
+  }
 
   const loadAiSuggestion = async () => {
     if (aiLoading) return
@@ -2085,9 +2262,29 @@ export default function GenroinConsole() {
               loading={aiLoading}
               error={aiError}
               onRefresh={loadAiSuggestion}
+              backupProps={{
+                backups,
+                loading: backupsLoading,
+                busy: backupBusy,
+                restoreBusy,
+                onLoad: loadBackups,
+                onCreate: createBackup,
+                onRestore: restoreBackup,
+              }}
             />
           ) : (
-            <RightPanelNormal history={history} />
+            <RightPanelNormal
+              history={history}
+              backupProps={{
+                backups,
+                loading: backupsLoading,
+                busy: backupBusy,
+                restoreBusy,
+                onLoad: loadBackups,
+                onCreate: createBackup,
+                onRestore: restoreBackup,
+              }}
+            />
           )}
         </aside>
       </div>
