@@ -430,6 +430,60 @@ async function callGAS(action, body) {
   return data
 }
 
+function priorityBadgeStyle(p) {
+  const v = String(p || '').toUpperCase()
+  const colors = {
+    A: { bg: '#7f1d1d', fg: '#fecaca' },
+    B: { bg: '#78350f', fg: '#fde68a' },
+    C: { bg: '#1f2937', fg: '#9ca3af' },
+  }
+  const c = colors[v] || colors.C
+  return {
+    display: 'inline-block',
+    fontSize: 11,
+    padding: '2px 8px',
+    borderRadius: 999,
+    background: c.bg,
+    color: c.fg,
+    marginLeft: 4,
+    fontWeight: 700,
+  }
+}
+
+function adoptionBadgeStyle(a) {
+  const isYes = a === 'Yes'
+  return {
+    display: 'inline-block',
+    fontSize: 11,
+    padding: '2px 8px',
+    borderRadius: 999,
+    background: isYes ? '#064e3b' : '#7f1d1d',
+    color: isYes ? '#6ee7b7' : '#fecaca',
+    marginLeft: 4,
+    fontWeight: 700,
+  }
+}
+
+function statusBadgeStyle(s) {
+  const map = {
+    未着手: { bg: '#1f2937', fg: '#9ca3af' },
+    進行中: { bg: '#78350f', fg: '#fde68a' },
+    完了: { bg: '#064e3b', fg: '#6ee7b7' },
+    中止: { bg: '#7f1d1d', fg: '#fecaca' },
+  }
+  const c = map[s] || map['未着手']
+  return {
+    display: 'inline-block',
+    fontSize: 11,
+    padding: '2px 8px',
+    borderRadius: 999,
+    background: c.bg,
+    color: c.fg,
+    marginLeft: 8,
+    fontWeight: 700,
+  }
+}
+
 function formatTimestamp(v) {
   if (!v) return ''
   try {
@@ -490,6 +544,19 @@ export default function GenroinConsole() {
   const [smokingPosting, setSmokingPosting] = useState(false)
   const [smokingProcessing, setSmokingProcessing] = useState(false)
 
+  // 議事（元老院）
+  const [genroinList, setGenroinList] = useState([])
+  const [genroinLoading, setGenroinLoading] = useState(false)
+  const [genroinMemoEdits, setGenroinMemoEdits] = useState({}) // {id: memo}
+  const [genroinBusyId, setGenroinBusyId] = useState(null) // id currently being updated
+
+  // 勅命（案件）
+  const [taskList, setTaskList] = useState([])
+  const [taskLoading, setTaskLoading] = useState(false)
+  const [logOpenId, setLogOpenId] = useState(null) // taskId whose log form is open
+  const [logForm, setLogForm] = useState({ result: '', success: '', learning: '' })
+  const [logBusy, setLogBusy] = useState(false)
+
   const handleInputChange = (e) => {
     const v = e.target.value
     setInput(v)
@@ -518,6 +585,121 @@ export default function GenroinConsole() {
     setActiveTab(next)
     setError('')
     if (next === 'smoking' && smokingList.length === 0) loadSmokingList()
+    if (next === 'genroin' && genroinList.length === 0) loadGenroinList()
+    if (next === 'task' && taskList.length === 0) loadTaskList()
+  }
+
+  // ===== 議事（元老院） =====
+  const loadGenroinList = async () => {
+    setGenroinLoading(true)
+    setError('')
+    try {
+      const r = await callGAS('list', { sheet: '元老院' })
+      setGenroinList(Array.isArray(r.items) ? r.items : [])
+      setGenroinMemoEdits({})
+    } catch (e) {
+      setError(e?.message || '議事一覧取得失敗')
+    } finally {
+      setGenroinLoading(false)
+    }
+  }
+
+  const handleAdoption = async (id, value) => {
+    if (genroinBusyId) return
+    setGenroinBusyId(id)
+    setError('')
+    try {
+      await callGAS('updateGenroin', { genroinId: id, adoption: value })
+      showToast('採用可否更新: ' + (value || '未決'))
+      await loadGenroinList()
+    } catch (e) {
+      setError(e?.message || '採用可否更新失敗')
+    } finally {
+      setGenroinBusyId(null)
+    }
+  }
+
+  const handleSaveMemo = async (id) => {
+    if (genroinBusyId) return
+    const memo = genroinMemoEdits[id] || ''
+    setGenroinBusyId(id)
+    setError('')
+    try {
+      await callGAS('updateGenroin', { genroinId: id, memo })
+      showToast('御記録: 保存')
+      await loadGenroinList()
+    } catch (e) {
+      setError(e?.message || 'メモ保存失敗')
+    } finally {
+      setGenroinBusyId(null)
+    }
+  }
+
+  const handleCreateTask = async (id) => {
+    if (genroinBusyId) return
+    setGenroinBusyId(id)
+    setError('')
+    try {
+      const r = await callGAS('createTask', { genroinId: id })
+      showToast('勅命下達: ' + r.taskId)
+      await loadGenroinList()
+      if (taskList.length > 0) await loadTaskList()
+    } catch (e) {
+      setError(e?.message || '勅命下達失敗')
+    } finally {
+      setGenroinBusyId(null)
+    }
+  }
+
+  // ===== 勅命（案件） =====
+  const loadTaskList = async () => {
+    setTaskLoading(true)
+    setError('')
+    try {
+      const r = await callGAS('list', { sheet: '案件' })
+      setTaskList(Array.isArray(r.items) ? r.items : [])
+    } catch (e) {
+      setError(e?.message || '勅命一覧取得失敗')
+    } finally {
+      setTaskLoading(false)
+    }
+  }
+
+  const openLogForm = (taskId) => {
+    if (logOpenId === taskId) {
+      setLogOpenId(null)
+    } else {
+      setLogOpenId(taskId)
+      setLogForm({ result: '', success: '', learning: '' })
+    }
+  }
+
+  const handleAddLog = async (taskId) => {
+    if (logBusy) return
+    if (!logForm.result.trim()) {
+      setError('結果は必須です')
+      return
+    }
+    setLogBusy(true)
+    setError('')
+    try {
+      await callGAS('addLog', {
+        data: {
+          taskId,
+          result: logForm.result.trim(),
+          success: logForm.success,
+          learning: logForm.learning.trim(),
+        },
+      })
+      showToast('実行録: 記帳')
+      setLogOpenId(null)
+      setLogForm({ result: '', success: '', learning: '' })
+      await loadTaskList()
+    } catch (e) {
+      setError(e?.message || '実行録追加失敗')
+    } finally {
+      setLogBusy(false)
+    }
   }
 
   const loadSmokingList = async () => {
@@ -1106,17 +1288,281 @@ export default function GenroinConsole() {
 
         {activeTab === 'genroin' && (
           <div style={styles.card}>
-            <div style={styles.placeholder}>
-              議事の間 — Phase 3 にて開廷予定
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: 6,
+              }}
+            >
+              <div style={styles.label}>
+                議事一覧（{genroinList.length}）
+              </div>
+              <button
+                type="button"
+                style={styles.secondaryBtn(genroinLoading)}
+                disabled={genroinLoading}
+                onClick={loadGenroinList}
+              >
+                {genroinLoading ? '閲覧中…' : '再閲覧'}
+              </button>
             </div>
+            {genroinList.length === 0 ? (
+              <div style={styles.emptyHistory}>
+                {genroinLoading ? '閲覧中…' : '議題なし'}
+              </div>
+            ) : (
+              genroinList.map((g, i) => {
+                const id = g['元老院ID']
+                const adoption = g['採用可否'] || ''
+                const memo = genroinMemoEdits[id] !== undefined
+                  ? genroinMemoEdits[id]
+                  : (g['メモ'] || '')
+                const memoChanged = genroinMemoEdits[id] !== undefined &&
+                  genroinMemoEdits[id] !== (g['メモ'] || '')
+                const busy = genroinBusyId === id
+                return (
+                  <div
+                    key={id || i}
+                    style={{
+                      borderTop: '1px solid #2a2418',
+                      padding: '14px 4px',
+                    }}
+                  >
+                    <div style={{ marginBottom: 6 }}>
+                      <span style={styles.badge}>{id}</span>
+                      <strong style={{ color: '#e8e8e8' }}>{g['タイトル']}</strong>
+                      <span style={{ ...styles.badge, marginLeft: 8 }}>
+                        {g['カテゴリ']}
+                      </span>
+                      <span style={priorityBadgeStyle(g['優先度'])}>
+                        優{g['優先度']}
+                      </span>
+                      {adoption && (
+                        <span style={adoptionBadgeStyle(adoption)}>
+                          {adoption === 'Yes' ? '採用' : '不採用'}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ color: '#cbd5e1', marginBottom: 8, fontSize: 13 }}>
+                      {g['要約']}
+                    </div>
+
+                    <div style={styles.flagRow}>
+                      <label style={styles.flagLabel}>
+                        <input
+                          type="radio"
+                          name={'adoption-' + id}
+                          checked={adoption === 'Yes'}
+                          disabled={busy}
+                          onChange={() => handleAdoption(id, 'Yes')}
+                        />
+                        採用（Yes）
+                      </label>
+                      <label style={styles.flagLabel}>
+                        <input
+                          type="radio"
+                          name={'adoption-' + id}
+                          checked={adoption === 'No'}
+                          disabled={busy}
+                          onChange={() => handleAdoption(id, 'No')}
+                        />
+                        不採用（No）
+                      </label>
+                      <label style={styles.flagLabel}>
+                        <input
+                          type="radio"
+                          name={'adoption-' + id}
+                          checked={!adoption}
+                          disabled={busy}
+                          onChange={() => handleAdoption(id, '')}
+                        />
+                        未決
+                      </label>
+                    </div>
+
+                    <textarea
+                      style={{ ...styles.textarea, minHeight: 60, marginTop: 8 }}
+                      value={memo}
+                      onChange={(e) =>
+                        setGenroinMemoEdits({
+                          ...genroinMemoEdits,
+                          [id]: e.target.value,
+                        })
+                      }
+                      placeholder="御記録（補足メモ）"
+                    />
+                    <div style={styles.rowActions}>
+                      <button
+                        type="button"
+                        style={styles.secondaryBtn(!memoChanged || busy)}
+                        disabled={!memoChanged || busy}
+                        onClick={() => handleSaveMemo(id)}
+                      >
+                        御記録 保存
+                      </button>
+                      <button
+                        type="button"
+                        style={styles.primaryBtn(adoption !== 'Yes' || busy)}
+                        disabled={adoption !== 'Yes' || busy}
+                        onClick={() => handleCreateTask(id)}
+                      >
+                        勅命に下す
+                      </button>
+                    </div>
+                  </div>
+                )
+              })
+            )}
           </div>
         )}
 
         {activeTab === 'task' && (
           <div style={styles.card}>
-            <div style={styles.placeholder}>
-              勅命の間 — Phase 3 にて開設予定
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: 6,
+              }}
+            >
+              <div style={styles.label}>勅命一覧（{taskList.length}）</div>
+              <button
+                type="button"
+                style={styles.secondaryBtn(taskLoading)}
+                disabled={taskLoading}
+                onClick={loadTaskList}
+              >
+                {taskLoading ? '閲覧中…' : '再閲覧'}
+              </button>
             </div>
+            {taskList.length === 0 ? (
+              <div style={styles.emptyHistory}>
+                {taskLoading ? '閲覧中…' : '勅命なし'}
+              </div>
+            ) : (
+              taskList.map((t, i) => {
+                const id = t['案件ID']
+                const status = t['ステータス'] || '未着手'
+                const isOpen = logOpenId === id
+                return (
+                  <div
+                    key={id || i}
+                    style={{
+                      borderTop: '1px solid #2a2418',
+                      padding: '14px 4px',
+                    }}
+                  >
+                    <div style={{ marginBottom: 4 }}>
+                      <span style={styles.badge}>{id}</span>
+                      <strong style={{ color: '#e8e8e8' }}>{t['タイトル']}</strong>
+                      <span style={statusBadgeStyle(status)}>{status}</span>
+                      {t['カテゴリ'] && (
+                        <span style={{ ...styles.badge, marginLeft: 8 }}>
+                          {t['カテゴリ']}
+                        </span>
+                      )}
+                      {t['優先度'] && (
+                        <span style={priorityBadgeStyle(t['優先度'])}>
+                          優{t['優先度']}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ color: '#9ca3af', fontSize: 12 }}>
+                      {t['担当者'] && '担当: ' + t['担当者']}
+                      {t['期限'] && (
+                        <span style={{ marginLeft: 12 }}>
+                          期限: {formatTimestamp(t['期限'])}
+                        </span>
+                      )}
+                      {t['元老院ID'] && (
+                        <span style={{ marginLeft: 12 }}>← {t['元老院ID']}</span>
+                      )}
+                    </div>
+                    <div style={styles.rowActions}>
+                      <button
+                        type="button"
+                        style={styles.secondaryBtn(false)}
+                        onClick={() => openLogForm(id)}
+                      >
+                        {isOpen ? '実行録 閉じる' : '実行録 追加'}
+                      </button>
+                    </div>
+                    {isOpen && (
+                      <div
+                        style={{
+                          marginTop: 8,
+                          padding: 12,
+                          background: '#0d0d0d',
+                          border: '1px solid #3a2f15',
+                          borderRadius: 8,
+                        }}
+                      >
+                        <div style={styles.fieldRow}>
+                          <span style={styles.label}>結果（必須）</span>
+                          <input
+                            type="text"
+                            style={styles.input}
+                            value={logForm.result}
+                            onChange={(e) =>
+                              setLogForm({ ...logForm, result: e.target.value })
+                            }
+                            placeholder="実行結果の概要"
+                          />
+                        </div>
+                        <div style={styles.fieldRow}>
+                          <span style={styles.label}>成功/失敗</span>
+                          <div style={styles.flagRow}>
+                            {['成功', '失敗', '部分'].map((v) => (
+                              <label key={v} style={styles.flagLabel}>
+                                <input
+                                  type="radio"
+                                  name={'success-' + id}
+                                  checked={logForm.success === v}
+                                  onChange={() =>
+                                    setLogForm({ ...logForm, success: v })
+                                  }
+                                />
+                                {v}
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                        <div style={styles.fieldRow}>
+                          <span style={styles.label}>学び</span>
+                          <textarea
+                            style={{ ...styles.textarea, minHeight: 60 }}
+                            value={logForm.learning}
+                            onChange={(e) =>
+                              setLogForm({ ...logForm, learning: e.target.value })
+                            }
+                            placeholder="教訓・改善点"
+                          />
+                        </div>
+                        <div style={styles.rowActions}>
+                          <button
+                            type="button"
+                            style={styles.primaryBtn(
+                              !logForm.result.trim() || logBusy,
+                            )}
+                            disabled={!logForm.result.trim() || logBusy}
+                            onClick={() => handleAddLog(id)}
+                          >
+                            {logBusy ? (
+                              <span style={styles.deliberating}>記帳中…</span>
+                            ) : (
+                              '実行録 記帳'
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })
+            )}
           </div>
         )}
       </div>
