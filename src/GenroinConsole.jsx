@@ -5,7 +5,7 @@ const CATEGORIES = ['EC', '買取', '新規事業', '管理']
 const INPUT_TEMPLATE =
   '【カテゴリ】\nEC / 買取 / 新規事業 / 管理\n\n【現状】\n\n【課題】\n\n【判断したいこと】\n'
 
-const styles = {
+const baseStyles = {
   page: {
     minHeight: '100vh',
     background: 'radial-gradient(ellipse at top, #14110a 0%, #0a0a0a 60%)',
@@ -324,6 +324,126 @@ const styles = {
       'linear-gradient(90deg, transparent, #fbbf24, transparent)',
     animation: 'genroinSlide 1.2s linear infinite',
   },
+  toggleBtn: (on) => ({
+    padding: '6px 14px',
+    background: on ? 'linear-gradient(180deg, #fbbf24 0%, #d4a017 100%)' : '#161616',
+    color: on ? '#0a0a0a' : '#9ca3af',
+    border: '1px solid ' + (on ? '#d4a017' : '#3a3a3a'),
+    borderRadius: 6,
+    cursor: 'pointer',
+    fontSize: 12,
+    fontWeight: 700,
+    letterSpacing: 0.5,
+    whiteSpace: 'nowrap',
+  }),
+}
+
+function buildStyles(g) {
+  // g = genroinMode (true = full regal, false = subdued dark)
+  return {
+    ...baseStyles,
+    title: {
+      ...baseStyles.title,
+      color: g ? '#fbbf24' : '#e8e8e8',
+      letterSpacing: g ? 2 : 0,
+    },
+    subtitle: {
+      ...baseStyles.subtitle,
+      color: g ? '#9ca3af' : '#9ca3af',
+      letterSpacing: g ? 1 : 0,
+    },
+    card: {
+      ...baseStyles.card,
+      background: g
+        ? 'linear-gradient(180deg, #1a1a1a 0%, #141414 100%)'
+        : '#161616',
+      border: '1px solid ' + (g ? '#3a2f15' : '#2a2a2a'),
+      boxShadow: g
+        ? '0 2px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(212,160,23,0.08)'
+        : '0 1px 4px rgba(0,0,0,0.3)',
+    },
+    label: {
+      ...baseStyles.label,
+      color: g ? '#d4a017' : '#9ca3af',
+      letterSpacing: g ? 1 : 0,
+    },
+    catBtn: (active) => ({
+      ...baseStyles.catBtn(active),
+      border: '1px solid ' + (active ? (g ? '#d4a017' : '#5a5a5a') : '#3a2f15'),
+      background: active ? (g ? '#d4a017' : '#3a3a3a') : '#1a1a1a',
+      color: active ? (g ? '#0a0a0a' : '#fff') : '#e8e8e8',
+    }),
+    runBtn: (disabled) => ({
+      ...baseStyles.runBtn(disabled),
+      border: '1px solid ' + (disabled ? '#3a2f15' : g ? '#d4a017' : '#5a5a5a'),
+      background: disabled
+        ? '#1a1a1a'
+        : g
+          ? 'linear-gradient(180deg, #fbbf24 0%, #d4a017 100%)'
+          : '#3a3a3a',
+      color: disabled ? '#6b7280' : g ? '#0a0a0a' : '#fff',
+      letterSpacing: g ? 1 : 0,
+      boxShadow: disabled ? 'none' : g ? '0 2px 8px rgba(212,160,23,0.3)' : 'none',
+    }),
+    primaryBtn: (disabled) => ({
+      ...baseStyles.primaryBtn(disabled),
+      border: '1px solid ' + (disabled ? '#3a2f15' : g ? '#d4a017' : '#5a5a5a'),
+      background: disabled
+        ? '#1a1a1a'
+        : g
+          ? 'linear-gradient(180deg, #fbbf24 0%, #d4a017 100%)'
+          : '#3a3a3a',
+      color: disabled ? '#6b7280' : g ? '#0a0a0a' : '#fff',
+      letterSpacing: g ? 1 : 0,
+    }),
+    secondaryBtn: (disabled) => ({
+      ...baseStyles.secondaryBtn(disabled),
+      color: disabled ? '#6b7280' : g ? '#d4a017' : '#9ca3af',
+    }),
+    resultLabel: {
+      ...baseStyles.resultLabel,
+      color: g ? '#d4a017' : '#9ca3af',
+      letterSpacing: g ? 1 : 0,
+    },
+    badge: {
+      ...baseStyles.badge,
+      background: g ? '#2a2418' : '#2a2a2a',
+      color: g ? '#d4a017' : '#9ca3af',
+      letterSpacing: g ? 0.5 : 0,
+    },
+    badgeImportant: {
+      ...baseStyles.badgeImportant,
+      background: g ? '#d4a017' : '#a16207',
+      color: g ? '#0a0a0a' : '#fef3c7',
+    },
+    tabBtn: (active) => ({
+      ...baseStyles.tabBtn(active),
+      color: active ? (g ? '#fbbf24' : '#e8e8e8') : '#9ca3af',
+      borderBottom: active
+        ? '3px solid ' + (g ? '#fbbf24' : '#5a5a5a')
+        : '3px solid transparent',
+      textShadow: active && g ? '0 0 8px rgba(251,191,36,0.4)' : 'none',
+    }),
+    quickBtnImportant: {
+      ...baseStyles.quickBtnImportant,
+      background: g
+        ? 'linear-gradient(180deg, #fbbf24 0%, #d4a017 100%)'
+        : '#a16207',
+      color: g ? '#0a0a0a' : '#fef3c7',
+      border: '1px solid ' + (g ? '#d4a017' : '#92400e'),
+    },
+    toast: {
+      ...baseStyles.toast,
+      background: g
+        ? 'linear-gradient(180deg, #1a1a1a 0%, #0d0d0d 100%)'
+        : '#1a1a1a',
+      color: g ? '#fbbf24' : '#e8e8e8',
+      border: '1px solid ' + (g ? '#d4a017' : '#3a3a3a'),
+      boxShadow: g
+        ? '0 4px 16px rgba(212,160,23,0.3)'
+        : '0 4px 12px rgba(0,0,0,0.5)',
+    },
+  }
 }
 
 function autoTitle(text, category) {
@@ -544,6 +664,11 @@ export default function GenroinConsole() {
   const [smokingPosting, setSmokingPosting] = useState(false)
   const [smokingProcessing, setSmokingProcessing] = useState(false)
 
+  // 元老院モード（C: 装飾＋文言の強度切替、ダーク維持）
+  const [genroinMode, setGenroinMode] = useState(false)
+  const T = (regal, normal) => (genroinMode ? regal : normal)
+  const styles = buildStyles(genroinMode)
+
   // 議事（元老院）
   const [genroinList, setGenroinList] = useState([])
   const [genroinLoading, setGenroinLoading] = useState(false)
@@ -610,7 +735,7 @@ export default function GenroinConsole() {
     setError('')
     try {
       await callGAS('updateGenroin', { genroinId: id, adoption: value })
-      showToast('採用可否更新: ' + (value || '未決'))
+      showToast(T('採用可否更新: ', '採用更新: ') + (value || T('未決', '未決定')))
       await loadGenroinList()
     } catch (e) {
       setError(e?.message || '採用可否更新失敗')
@@ -626,7 +751,7 @@ export default function GenroinConsole() {
     setError('')
     try {
       await callGAS('updateGenroin', { genroinId: id, memo })
-      showToast('御記録: 保存')
+      showToast(T('御記録: 保存', 'メモ: 保存'))
       await loadGenroinList()
     } catch (e) {
       setError(e?.message || 'メモ保存失敗')
@@ -641,7 +766,7 @@ export default function GenroinConsole() {
     setError('')
     try {
       const r = await callGAS('createTask', { genroinId: id })
-      showToast('勅命下達: ' + r.taskId)
+      showToast(T('勅命下達: ', '案件作成: ') + r.taskId)
       await loadGenroinList()
       if (taskList.length > 0) await loadTaskList()
     } catch (e) {
@@ -691,7 +816,7 @@ export default function GenroinConsole() {
           learning: logForm.learning.trim(),
         },
       })
-      showToast('実行録: 記帳')
+      showToast(T('実行録: 記帳', '実行ログ: 記録'))
       setLogOpenId(null)
       setLogForm({ result: '', success: '', learning: '' })
       await loadTaskList()
@@ -728,7 +853,7 @@ export default function GenroinConsole() {
           author: smokingForm.author.trim(),
         },
       })
-      showToast('奏上完了: ' + r.id)
+      showToast(T('奏上完了: ', '投稿しました: ') + r.id)
       setSmokingForm({ content: '', tags: '', author: smokingForm.author })
       await loadSmokingList()
     } catch (e) {
@@ -747,9 +872,11 @@ export default function GenroinConsole() {
       const n = r.processed || 0
       const errN = (r.errors || []).length
       if (n === 0 && errN === 0) {
-        showToast('未処理なし')
+        showToast(T('未処理なし', '未処理ゼロ'))
       } else {
-        showToast(n + '件を議に付しました（失敗' + errN + '）')
+        showToast(
+          T(n + '件を議に付しました（失敗' + errN + '）', 'AI処理 ' + n + '件 (失敗' + errN + ')'),
+        )
       }
       await loadSmokingList()
     } catch (e) {
@@ -778,14 +905,14 @@ export default function GenroinConsole() {
           h.id === id ? { ...h, isImportant: true, isActive: true } : h,
         ),
       )
-      showToast('★ 勅令として記録')
+      showToast(T('★ 勅令として記録', '★ 重要に登録しました'))
     } else if (type === 'discard') {
       setHistory((prev) =>
         prev.map((h) => (h.id === id ? { ...h, isActive: false } : h)),
       )
-      showToast('却下')
+      showToast(T('却下', '破棄しました'))
     } else if (type === 'hold') {
-      showToast('持ち越し')
+      showToast(T('持ち越し', '保留しました'))
     }
   }
 
@@ -861,16 +988,27 @@ export default function GenroinConsole() {
       `}</style>
       <div style={styles.container}>
         <div style={styles.header}>
-          <h1 style={styles.title}>元 老 院</h1>
-          <p style={styles.subtitle}>御 前 会 議 — 裁可と記録の一元</p>
+          <div>
+            <h1 style={styles.title}>{T('元 老 院', '元老院')}</h1>
+            <p style={styles.subtitle}>
+              {T('御 前 会 議 — 裁可と記録の一元', 'AI司令塔 — 指示・記録・判断')}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setGenroinMode((v) => !v)}
+            style={styles.toggleBtn(genroinMode)}
+          >
+            元老院モード {genroinMode ? 'ON' : 'OFF'}
+          </button>
         </div>
 
         <div style={styles.tabBar}>
           {[
-            { key: 'judge', label: '即決（AI判断）' },
-            { key: 'smoking', label: '上奏（喫煙所）' },
-            { key: 'genroin', label: '議事（元老院）' },
-            { key: 'task', label: '勅命（案件）' },
+            { key: 'judge', label: T('即決（AI判断）', 'AI判断') },
+            { key: 'smoking', label: T('上奏（喫煙所）', '喫煙所') },
+            { key: 'genroin', label: T('議事（元老院）', '元老院') },
+            { key: 'task', label: T('勅命（案件）', '案件') },
           ].map((t) => (
             <button
               key={t.key}
@@ -901,7 +1039,7 @@ export default function GenroinConsole() {
 
         <div style={styles.card}>
           <div style={styles.fieldRow}>
-            <span style={styles.label}>議題</span>
+            <span style={styles.label}>{T('議題', 'カテゴリ')}</span>
             <div style={styles.catRow}>
               {CATEGORIES.map((c) => (
                 <button
@@ -917,13 +1055,15 @@ export default function GenroinConsole() {
           </div>
 
           <div style={styles.fieldRow}>
-            <span style={styles.label}>議題名（自動生成・編集可）</span>
+            <span style={styles.label}>
+              {T('議題名（自動生成・編集可）', '案件名（自動生成・編集可）')}
+            </span>
             <input
               type="text"
               style={styles.input}
               value={title}
               onChange={handleTitleChange}
-              placeholder="上奏内容より自動生成"
+              placeholder={T('上奏内容より自動生成', '入力すると自動で生成されます')}
             />
           </div>
 
@@ -936,25 +1076,27 @@ export default function GenroinConsole() {
                 gap: 8,
               }}
             >
-              <span style={styles.label}>上奏内容</span>
+              <span style={styles.label}>{T('上奏内容', '入力')}</span>
               <button
                 type="button"
                 onClick={handleInsertTemplate}
                 style={styles.tmplBtn}
               >
-                ＋ 定型奏上
+                {T('＋ 定型奏上', '＋ テンプレ挿入')}
               </button>
             </div>
             <textarea
               style={styles.textarea}
               value={input}
               onChange={handleInputChange}
-              placeholder="御諮問の趣旨を述べよ"
+              placeholder={T('御諮問の趣旨を述べよ', '案件・相談内容を自由記入')}
             />
           </div>
 
           <div style={styles.fieldRow}>
-            <span style={styles.label}>添付（最大3枚・プレビューのみ）</span>
+            <span style={styles.label}>
+              {T('添付（最大3枚・プレビューのみ）', '画像（最大3枚・プレビューのみ）')}
+            </span>
             <div style={styles.uploadRow}>
               {images.map((src, i) => (
                 <div key={i} style={styles.thumbWrap}>
@@ -971,7 +1113,7 @@ export default function GenroinConsole() {
               ))}
               {images.length < 3 && (
                 <label style={styles.fileBtn}>
-                  ＋ 添付追加
+                  {T('＋ 添付追加', '＋ 画像を追加')}
                   <input
                     type="file"
                     accept="image/*"
@@ -999,32 +1141,38 @@ export default function GenroinConsole() {
                   gap: 0,
                 }}
               >
-                <span style={styles.deliberating}>審議中…</span>
+                <span style={styles.deliberating}>{T('審議中…', '実行中…')}</span>
                 <span style={styles.loadingLineWrap}>
                   <span style={styles.loadingLine} />
                 </span>
               </span>
             ) : (
-              '裁可（実行）'
+              T('裁可（実行）', '実行')
             )}
           </button>
         </div>
 
         {result && (
           <div style={styles.card}>
-            <div style={{ ...styles.label, marginBottom: 10 }}>裁可</div>
+            <div style={{ ...styles.label, marginBottom: 10 }}>
+              {T('裁可', '結果')}
+            </div>
             <div style={{ marginBottom: 8 }}>
               <span style={styles.badge}>{result.category}</span>
               <strong>{result.title}</strong>
               <span style={{ ...styles.meta, marginLeft: 8 }}>{result.timestamp}</span>
             </div>
             <div style={{ ...styles.resultBlock, marginBottom: 10 }}>
-              <div style={styles.resultLabel}>御見立</div>
+              <div style={styles.resultLabel}>{T('御見立', '判断')}</div>
               {(() => {
                 const j = String(result.judgment || '').toUpperCase()
                 const isOK = j === 'OK'
                 const isNG = j === 'NG'
-                const label = isOK ? '可' : isNG ? '不可' : result.judgment
+                const label = isOK
+                  ? T('可', 'OK')
+                  : isNG
+                    ? T('不可', 'NG')
+                    : result.judgment
                 const fg = isOK ? '#34d399' : isNG ? '#f87171' : '#e8e8e8'
                 return (
                   <span
@@ -1033,12 +1181,14 @@ export default function GenroinConsole() {
                       padding: '6px 18px',
                       borderRadius: 6,
                       background: '#0a0a0a',
-                      border: '1px solid #d4a017',
+                      border: '1px solid ' + (genroinMode ? '#d4a017' : '#3a3a3a'),
                       color: fg,
                       fontWeight: 700,
                       fontSize: 16,
-                      letterSpacing: 4,
-                      boxShadow: '0 0 12px rgba(212,160,23,0.2)',
+                      letterSpacing: genroinMode ? 4 : 1,
+                      boxShadow: genroinMode
+                        ? '0 0 12px rgba(212,160,23,0.2)'
+                        : 'none',
                     }}
                   >
                     {label}
@@ -1047,11 +1197,11 @@ export default function GenroinConsole() {
               })()}
             </div>
             <div style={{ ...styles.resultBlock, marginBottom: 10 }}>
-              <div style={styles.resultLabel}>御沙汰</div>
+              <div style={styles.resultLabel}>{T('御沙汰', '結論')}</div>
               {result.conclusion}
             </div>
             <div style={styles.resultBlock}>
-              <div style={styles.resultLabel}>仰せの理</div>
+              <div style={styles.resultLabel}>{T('仰せの理', '理由')}</div>
               {result.reason}
             </div>
             <div style={styles.quickRow}>
@@ -1060,21 +1210,21 @@ export default function GenroinConsole() {
                 style={styles.quickBtnImportant}
                 onClick={() => applyQuickAction(result.id, 'important')}
               >
-                ★ 勅令認定
+                {T('★ 勅令認定', '★ 重要にする')}
               </button>
               <button
                 type="button"
                 style={styles.quickBtnDiscard}
                 onClick={() => applyQuickAction(result.id, 'discard')}
               >
-                却下
+                {T('却下', '破棄')}
               </button>
               <button
                 type="button"
                 style={styles.quickBtnHold}
                 onClick={() => applyQuickAction(result.id, 'hold')}
               >
-                持ち越し
+                {T('持ち越し', '保留')}
               </button>
             </div>
           </div>
@@ -1082,10 +1232,12 @@ export default function GenroinConsole() {
 
         <div style={styles.card}>
           <div style={{ ...styles.label, marginBottom: 6 }}>
-            議事録（最新{Math.min(history.length, 50)}件 / 最大50）
+            {T('議事録', '履歴')}（最新{Math.min(history.length, 50)}件 / 最大50）
           </div>
           {history.length === 0 ? (
-            <div style={styles.emptyHistory}>議事録なし</div>
+            <div style={styles.emptyHistory}>
+              {T('議事録なし', 'まだ履歴はありません')}
+            </div>
           ) : (
             history.map((h, i) => {
               const isActive = h.isActive !== false
@@ -1100,7 +1252,7 @@ export default function GenroinConsole() {
                     <strong>{h.title}</strong>
                     {isImportant && (
                       <span style={{ ...styles.badge, ...styles.badgeImportant }}>
-                        ★勅令
+                        {T('★勅令', '★重要')}
                       </span>
                     )}
                     <span style={{ ...styles.meta, marginLeft: 8 }}>
@@ -1108,7 +1260,7 @@ export default function GenroinConsole() {
                     </span>
                     {h.image_count > 0 && (
                       <span style={{ ...styles.meta, marginLeft: 8 }}>
-                        添付{h.image_count}枚
+                        {T('添付', '画像')}{h.image_count}枚
                       </span>
                     )}
                   </div>
@@ -1124,7 +1276,7 @@ export default function GenroinConsole() {
                         onChange={() => toggleFlag(h.id, 'isImportant')}
                         disabled={!h.id}
                       />
-                      勅令
+                      {T('勅令', '重要')}
                     </label>
                     <label style={styles.flagLabel}>
                       <input
@@ -1133,7 +1285,7 @@ export default function GenroinConsole() {
                         onChange={() => toggleFlag(h.id, 'isActive')}
                         disabled={!h.id}
                       />
-                      議題対象
+                      {T('議題対象', '検索対象')}
                     </label>
                   </div>
                 </div>
@@ -1148,18 +1300,23 @@ export default function GenroinConsole() {
           <>
             <div style={styles.card}>
               <div style={styles.fieldRow}>
-                <span style={styles.label}>上奏文</span>
+                <span style={styles.label}>{T('上奏文', '内容')}</span>
                 <textarea
                   style={styles.textarea}
                   value={smokingForm.content}
                   onChange={(e) =>
                     setSmokingForm({ ...smokingForm, content: e.target.value })
                   }
-                  placeholder="思案・課題・献策を自由に上奏せよ"
+                  placeholder={T(
+                    '思案・課題・献策を自由に上奏せよ',
+                    '思いついたこと・課題・アイデアを自由に投稿',
+                  )}
                 />
               </div>
               <div style={styles.fieldRow}>
-                <span style={styles.label}>印（カンマ区切り任意）</span>
+                <span style={styles.label}>
+                  {T('印（カンマ区切り任意）', 'タグ（カンマ区切り任意）')}
+                </span>
                 <input
                   type="text"
                   style={styles.input}
@@ -1171,7 +1328,7 @@ export default function GenroinConsole() {
                 />
               </div>
               <div style={styles.fieldRow}>
-                <span style={styles.label}>上奏者</span>
+                <span style={styles.label}>{T('上奏者', '投稿者')}</span>
                 <input
                   type="text"
                   style={styles.input}
@@ -1179,7 +1336,7 @@ export default function GenroinConsole() {
                   onChange={(e) =>
                     setSmokingForm({ ...smokingForm, author: e.target.value })
                   }
-                  placeholder="氏名"
+                  placeholder={T('氏名', '名前')}
                 />
               </div>
               <div style={styles.rowActions}>
@@ -1199,13 +1356,15 @@ export default function GenroinConsole() {
                         alignItems: 'center',
                       }}
                     >
-                      <span style={styles.deliberating}>奏上中…</span>
+                      <span style={styles.deliberating}>
+                        {T('奏上中…', '投稿中…')}
+                      </span>
                       <span style={styles.loadingLineWrap}>
                         <span style={styles.loadingLine} />
                       </span>
                     </span>
                   ) : (
-                    '投稿（奏上）'
+                    T('投稿（奏上）', '投稿')
                   )}
                 </button>
                 <button
@@ -1222,13 +1381,15 @@ export default function GenroinConsole() {
                         alignItems: 'center',
                       }}
                     >
-                      <span style={styles.deliberating}>議事中…</span>
+                      <span style={styles.deliberating}>
+                        {T('議事中…', 'AI処理中…')}
+                      </span>
                       <span style={styles.loadingLineWrap}>
                         <span style={styles.loadingLine} />
                       </span>
                     </span>
                   ) : (
-                    'AI処理（議事）'
+                    T('AI処理（議事）', 'AI処理（未処理を一括構造化）')
                   )}
                 </button>
               </div>
@@ -1244,7 +1405,7 @@ export default function GenroinConsole() {
                 }}
               >
                 <div style={styles.label}>
-                  未処理上奏（{smokingList.length}）
+                  {T('未処理上奏', '未処理一覧')}（{smokingList.length}）
                 </div>
                 <button
                   type="button"
@@ -1252,12 +1413,16 @@ export default function GenroinConsole() {
                   disabled={smokingListLoading}
                   onClick={loadSmokingList}
                 >
-                  {smokingListLoading ? '閲覧中…' : '再閲覧'}
+                  {smokingListLoading
+                    ? T('閲覧中…', '読込中…')
+                    : T('再閲覧', '再読込')}
                 </button>
               </div>
               {smokingList.length === 0 ? (
                 <div style={styles.emptyHistory}>
-                  {smokingListLoading ? '閲覧中…' : '未処理なし'}
+                  {smokingListLoading
+                    ? T('閲覧中…', '読込中…')
+                    : T('未処理なし', '未処理はありません')}
                 </div>
               ) : (
                 smokingList.map((s, i) => (
@@ -1297,7 +1462,7 @@ export default function GenroinConsole() {
               }}
             >
               <div style={styles.label}>
-                議事一覧（{genroinList.length}）
+                {T('議事一覧', '元老院一覧')}（{genroinList.length}）
               </div>
               <button
                 type="button"
@@ -1305,12 +1470,16 @@ export default function GenroinConsole() {
                 disabled={genroinLoading}
                 onClick={loadGenroinList}
               >
-                {genroinLoading ? '閲覧中…' : '再閲覧'}
+                {genroinLoading
+                  ? T('閲覧中…', '読込中…')
+                  : T('再閲覧', '再読込')}
               </button>
             </div>
             {genroinList.length === 0 ? (
               <div style={styles.emptyHistory}>
-                {genroinLoading ? '閲覧中…' : '議題なし'}
+                {genroinLoading
+                  ? T('閲覧中…', '読込中…')
+                  : T('議題なし', '元老院エントリなし')}
               </div>
             ) : (
               genroinList.map((g, i) => {
@@ -1391,7 +1560,7 @@ export default function GenroinConsole() {
                           [id]: e.target.value,
                         })
                       }
-                      placeholder="御記録（補足メモ）"
+                      placeholder={T('御記録（補足メモ）', 'メモ（補足）')}
                     />
                     <div style={styles.rowActions}>
                       <button
@@ -1400,7 +1569,7 @@ export default function GenroinConsole() {
                         disabled={!memoChanged || busy}
                         onClick={() => handleSaveMemo(id)}
                       >
-                        御記録 保存
+                        {T('御記録 保存', 'メモ 保存')}
                       </button>
                       <button
                         type="button"
@@ -1408,7 +1577,7 @@ export default function GenroinConsole() {
                         disabled={adoption !== 'Yes' || busy}
                         onClick={() => handleCreateTask(id)}
                       >
-                        勅命に下す
+                        {T('勅命に下す', '案件化')}
                       </button>
                     </div>
                   </div>
@@ -1428,19 +1597,23 @@ export default function GenroinConsole() {
                 marginBottom: 6,
               }}
             >
-              <div style={styles.label}>勅命一覧（{taskList.length}）</div>
+              <div style={styles.label}>
+                {T('勅命一覧', '案件一覧')}（{taskList.length}）
+              </div>
               <button
                 type="button"
                 style={styles.secondaryBtn(taskLoading)}
                 disabled={taskLoading}
                 onClick={loadTaskList}
               >
-                {taskLoading ? '閲覧中…' : '再閲覧'}
+                {taskLoading ? T('閲覧中…', '読込中…') : T('再閲覧', '再読込')}
               </button>
             </div>
             {taskList.length === 0 ? (
               <div style={styles.emptyHistory}>
-                {taskLoading ? '閲覧中…' : '勅命なし'}
+                {taskLoading
+                  ? T('閲覧中…', '読込中…')
+                  : T('勅命なし', '案件なし')}
               </div>
             ) : (
               taskList.map((t, i) => {
@@ -1487,7 +1660,9 @@ export default function GenroinConsole() {
                         style={styles.secondaryBtn(false)}
                         onClick={() => openLogForm(id)}
                       >
-                        {isOpen ? '実行録 閉じる' : '実行録 追加'}
+                        {isOpen
+                          ? T('実行録 閉じる', '実行ログ 閉じる')
+                          : T('実行録 追加', '実行ログ 追加')}
                       </button>
                     </div>
                     {isOpen && (
@@ -1551,9 +1726,11 @@ export default function GenroinConsole() {
                             onClick={() => handleAddLog(id)}
                           >
                             {logBusy ? (
-                              <span style={styles.deliberating}>記帳中…</span>
+                              <span style={styles.deliberating}>
+                                {T('記帳中…', '記録中…')}
+                              </span>
                             ) : (
-                              '実行録 記帳'
+                              T('実行録 記帳', '実行ログ 記録')
                             )}
                           </button>
                         </div>
