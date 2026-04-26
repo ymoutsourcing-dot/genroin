@@ -235,21 +235,6 @@ function autoTitle(text, category) {
   return '[' + category + '] ' + head
 }
 
-function parseAIResponse(text) {
-  const pick = (label) => {
-    const re = new RegExp(
-      '【' + label + '】\\s*([\\s\\S]*?)(?=\\n*【(?:判断|結論|理由)】|$)',
-    )
-    const m = text.match(re)
-    return m ? m[1].trim() : ''
-  }
-  return {
-    judgment: pick('判断') || '保留',
-    conclusion: pick('結論') || text.trim().slice(0, 200),
-    reason: pick('理由') || '',
-  }
-}
-
 function tokenize(text) {
   if (!text) return []
   const parts = String(text)
@@ -314,46 +299,38 @@ function buildUserPrompt(category, input, relevant) {
   )
 }
 
-async function callOpenAI(category, input, history) {
-  const apiKey = import.meta.env.VITE_OPENAI_API_KEY
-  if (!apiKey) {
-    throw new Error(
-      'APIキーが未設定です。プロジェクト直下の .env.local に VITE_OPENAI_API_KEY を設定し、dev server を再起動してください。',
-    )
-  }
-  const system =
-    'あなたはAI司令塔「元老院」の補助役です。最終判断はユーザーが行います。' +
-    '過去の関連判断が提示された場合は、その文脈を踏まえて回答してください。' +
-    '回答は必ず以下のフォーマットを厳守してください。余計な前置きや後書きは禁止。\n' +
-    '【判断】\nOK / NG / 保留 のいずれか1つ\n' +
-    '【結論】\n簡潔に1〜2文でまとめる\n' +
-    '【理由】\n1行で'
-  const relevant = searchRelevantLogs(history, input, category)
-  const user = buildUserPrompt(category, input, relevant)
+const GAS_URL =
+  'https://script.google.com/macros/s/AKfycbzGMnq2PCB2zXkpz_-a2DNH0svR-TCLJnyTqCD2Bts-YYp2ur0PUv-IQEFFJgz-Brjy/exec'
 
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+const SYSTEM_PROMPT =
+  'あなたは事業責任者の意思決定補助AIです。\n\n' +
+  '以下のルールを厳守してください：\n\n' +
+  '・必ずOKかNGを出す（保留は禁止）\n' +
+  '・不確定要素があっても仮説で判断する\n' +
+  '・結論は実行前提で書く\n\n' +
+  'フォーマット：\n' +
+  '【判断】OK または NG\n' +
+  '【結論】具体的な実行方針\n' +
+  '【理由】ビジネス的根拠（簡潔）'
+
+async function callGAS(system, user) {
+  const res = await fetch(GAS_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: 'Bearer ' + apiKey,
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      temperature: 0.3,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: user },
-      ],
-    }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ system, user, secret: 'abc123' }),
   })
   if (!res.ok) {
-    const errText = await res.text().catch(() => '')
-    throw new Error('OpenAI APIエラー (' + res.status + '): ' + errText.slice(0, 200))
+    const t = await res.text().catch(() => '')
+    throw new Error('GASエラー (' + res.status + '): ' + t.slice(0, 200))
   }
   const data = await res.json()
-  const text = data?.choices?.[0]?.message?.content || ''
-  if (!text) throw new Error('APIから空の応答が返されました')
-  return parseAIResponse(text)
+  if (data?.error) throw new Error('GASエラー: ' + data.error)
+  return {
+    judgment: data.judgment,
+    conclusion: data.conclusion,
+    reason: data.reason,
+    votes: data.votes,
+  }
 }
 
 function nowStamp() {
@@ -472,7 +449,9 @@ export default function GenroinConsole() {
     setLoading(true)
     setError('')
     try {
-      const r = await callOpenAI(category, snapshotInput, history)
+      const relevant = searchRelevantLogs(history, snapshotInput, category)
+      const userPrompt = buildUserPrompt(category, snapshotInput, relevant)
+      const r = await callGAS(SYSTEM_PROMPT, userPrompt)
       const entry = {
         id: nowStamp() + '-' + Math.random().toString(36).slice(2, 8),
         timestamp: nowStamp(),
@@ -485,6 +464,7 @@ export default function GenroinConsole() {
         image_count: snapshotImages,
         isImportant: false,
         isActive: true,
+        votes: r.votes,
       }
       setResult(entry)
       saveLog(entry)
