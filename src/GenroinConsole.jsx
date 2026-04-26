@@ -534,14 +534,78 @@ function LeftPanelGenroin({ stats }) {
   )
 }
 
-function RightPanelGenroin({ recent, summary, suggestion }) {
+function RightPanelGenroin({ recent, summary, suggestion, fallback, loading, error, onRefresh }) {
   return (
     <div className="panel genroin">
-      <h3>AI進言</h3>
-      {suggestion ? (
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 12,
+        }}
+      >
+        <h3 style={{ margin: 0 }}>🤖 AI進言</h3>
+        <button
+          type="button"
+          onClick={onRefresh}
+          disabled={loading}
+          style={{
+            background: 'transparent',
+            border: '1px solid rgba(251,191,36,0.5)',
+            color: '#fbbf24',
+            borderRadius: 4,
+            padding: '2px 8px',
+            fontSize: 11,
+            cursor: loading ? 'not-allowed' : 'pointer',
+          }}
+        >
+          {loading ? '…' : '再進言'}
+        </button>
+      </div>
+      {loading ? (
+        <div className="ai-box" style={{ opacity: 0.7 }}>
+          分析中…
+          <div
+            style={{
+              marginTop: 6,
+              height: 2,
+              overflow: 'hidden',
+              borderRadius: 1,
+              background: 'rgba(212,160,23,0.15)',
+              position: 'relative',
+            }}
+          >
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '50%',
+                height: '100%',
+                background:
+                  'linear-gradient(90deg, transparent, #fbbf24, transparent)',
+                animation: 'genroinSlide 1.2s linear infinite',
+              }}
+            />
+          </div>
+        </div>
+      ) : error ? (
+        <div className="ai-box" style={{ borderColor: '#7f1d1d', color: '#fecaca' }}>
+          {error}
+          <div style={{ fontSize: 11, marginTop: 6, opacity: 0.7 }}>
+            （ローカル推論：{fallback}）
+          </div>
+        </div>
+      ) : suggestion ? (
         <div className="ai-box">{suggestion}</div>
       ) : (
-        <div style={{ opacity: 0.5, fontSize: 12 }}>分析中...</div>
+        <div className="ai-box" style={{ opacity: 0.7 }}>
+          {fallback}
+          <div style={{ fontSize: 11, marginTop: 6, opacity: 0.6 }}>
+            （ローカル推論。「再進言」で GPT 分析）
+          </div>
+        </div>
       )}
       <h3 style={{ marginTop: 20 }}>議事ログ</h3>
       <ul className="log">
@@ -851,6 +915,11 @@ export default function GenroinConsole() {
   const [logForm, setLogForm] = useState({ result: '', success: '', learning: '' })
   const [logBusy, setLogBusy] = useState(false)
 
+  // AI進言（GPT）
+  const [aiSuggestion, setAiSuggestion] = useState(null)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState('')
+
 
   const handleInputChange = (e) => {
     const v = e.target.value
@@ -882,6 +951,16 @@ export default function GenroinConsole() {
     if (next === 'smoking' && smokingList.length === 0) loadSmokingList()
     if (next === 'genroin' && genroinList.length === 0) loadGenroinList()
     if (next === 'task' && taskList.length === 0) loadTaskList()
+    // 議事/勅命タブで genroinモード時、AI進言が未取得なら自動 fetch
+    if (
+      genroinMode &&
+      (next === 'genroin' || next === 'task') &&
+      !aiSuggestion &&
+      !aiLoading
+    ) {
+      // 少し遅延（list取得を先行させる）
+      setTimeout(() => loadAiSuggestion(), 300)
+    }
   }
 
   // ===== 議事（元老院） =====
@@ -906,6 +985,7 @@ export default function GenroinConsole() {
     try {
       await callGAS('updateGenroin', { genroinId: id, adoption: value })
       showToast(T('採用可否更新: ', '採用更新: ') + (value || T('未決', '未決定')))
+      setAiSuggestion(null)
       await loadGenroinList()
     } catch (e) {
       setError(e?.message || '採用可否更新失敗')
@@ -937,6 +1017,7 @@ export default function GenroinConsole() {
     try {
       const r = await callGAS('createTask', { genroinId: id })
       showToast(T('勅命下達: ', '案件作成: ') + r.taskId)
+      setAiSuggestion(null)
       await loadGenroinList()
       if (taskList.length > 0) await loadTaskList()
     } catch (e) {
@@ -987,6 +1068,7 @@ export default function GenroinConsole() {
         },
       })
       showToast(T('実行録: 記帳', '実行ログ: 記録'))
+      setAiSuggestion(null)
       setLogOpenId(null)
       setLogForm({ result: '', success: '', learning: '' })
       await loadTaskList()
@@ -1148,24 +1230,34 @@ export default function GenroinConsole() {
     }
   }
 
-  const aiSuggestion = (() => {
+  const localFallbackSuggestion = (() => {
     const high = genroinList.filter((x) => x['優先度'] === 'A')
     const pending = smokingList.length
     const undecided = genroinList.filter((x) => !x['採用可否']).length
-    if (high.length > 0) {
-      return '優先度Aの議題が ' + high.length + ' 件。即時裁可を推奨。'
-    }
-    if (pending > 0) {
-      return '未処理上奏が ' + pending + ' 件。議事処理を推奨。'
-    }
-    if (undecided > 0) {
-      return '未決の議題が ' + undecided + ' 件。Yes/No決定を推奨。'
-    }
-    if (taskList.length === 0) {
-      return '勅命が存在しません。新規案件創出を推奨。'
-    }
+    if (high.length > 0) return '優先度Aの議題が ' + high.length + ' 件。即時裁可を推奨。'
+    if (pending > 0) return '未処理上奏が ' + pending + ' 件。議事処理を推奨。'
+    if (undecided > 0) return '未決の議題が ' + undecided + ' 件。Yes/No決定を推奨。'
+    if (taskList.length === 0) return '勅命が存在しません。新規案件創出を推奨。'
     return '現状は安定。改善案の探索を推奨。'
   })()
+
+  const loadAiSuggestion = async () => {
+    if (aiLoading) return
+    setAiLoading(true)
+    setAiError('')
+    try {
+      const r = await callGAS('aiSuggest', {
+        genroin: genroinList,
+        tasks: taskList,
+        smoking: smokingList,
+      })
+      setAiSuggestion(r.suggestion || '')
+    } catch (e) {
+      setAiError(e?.message || 'AI進言失敗')
+    } finally {
+      setAiLoading(false)
+    }
+  }
 
   const canRun = input.trim().length > 0 && !loading
 
@@ -1989,6 +2081,10 @@ export default function GenroinConsole() {
               recent={sideRecent}
               summary={sideSummary}
               suggestion={aiSuggestion}
+              fallback={localFallbackSuggestion}
+              loading={aiLoading}
+              error={aiError}
+              onRefresh={loadAiSuggestion}
             />
           ) : (
             <RightPanelNormal history={history} />
