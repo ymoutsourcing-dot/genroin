@@ -212,6 +212,63 @@ const styles = {
     color: '#6b7280',
     cursor: 'pointer',
   },
+  tabBar: {
+    display: 'flex',
+    gap: 4,
+    borderBottom: '1px solid #e5e7eb',
+    marginBottom: 4,
+    overflowX: 'auto',
+  },
+  tabBtn: (active) => ({
+    padding: '10px 16px',
+    border: 'none',
+    background: 'transparent',
+    color: active ? '#111' : '#6b7280',
+    fontWeight: active ? 700 : 500,
+    fontSize: 14,
+    cursor: 'pointer',
+    borderBottom: active ? '2px solid #111' : '2px solid transparent',
+    marginBottom: -1,
+    whiteSpace: 'nowrap',
+  }),
+  smokingItem: {
+    borderTop: '1px solid #f0f0f0',
+    padding: '10px 0',
+    fontSize: 13,
+    lineHeight: 1.55,
+  },
+  rowActions: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 4,
+    alignItems: 'center',
+  },
+  primaryBtn: (disabled) => ({
+    padding: '10px 16px',
+    borderRadius: 8,
+    border: 'none',
+    background: disabled ? '#bbb' : '#111',
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: disabled ? 'not-allowed' : 'pointer',
+  }),
+  secondaryBtn: (disabled) => ({
+    padding: '8px 14px',
+    borderRadius: 8,
+    border: '1px solid #d1d5db',
+    background: '#fff',
+    color: disabled ? '#aaa' : '#374151',
+    fontSize: 13,
+    cursor: disabled ? 'not-allowed' : 'pointer',
+  }),
+  placeholder: {
+    color: '#9ca3af',
+    fontSize: 14,
+    padding: '40px 0',
+    textAlign: 'center',
+  },
   toast: {
     position: 'fixed',
     bottom: 24,
@@ -310,23 +367,47 @@ const SYSTEM_PROMPT =
   '【結論】具体的な実行方針\n' +
   '【理由】ビジネス的根拠（簡潔）'
 
-async function callGAS(system, user) {
+const GAS_URL =
+  'https://script.google.com/macros/s/AKfycbzGMnq2PCB2zXkpz_-a2DNH0svR-TCLJnyTqCD2Bts-YYp2ur0PUv-IQEFFJgz-Brjy/exec'
+const GAS_SECRET = 'abc123'
+
+async function callGAS(action, body) {
+  const res = await fetch(GAS_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'text/plain;charset=utf-8',
+    },
+    body: JSON.stringify({
+      action,
+      secret: GAS_SECRET,
+      ...(body || {}),
+    }),
+  })
+  if (!res.ok) throw new Error('Network error')
+  const data = await res.json()
+  if (data?.error) throw new Error(data.error)
+  return data
+}
+
+function formatTimestamp(v) {
+  if (!v) return ''
   try {
-    const res = await fetch(
-      'https://script.google.com/macros/s/AKfycbzGMnq2PCB2zXkpz_-a2DNH0svR-TCLJnyTqCD2Bts-YYp2ur0PUv-IQEFFJgz-Brjy/exec',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ system, user, secret: 'abc123' }),
-      },
+    const d = new Date(v)
+    if (isNaN(d.getTime())) return String(v)
+    const pad = (n) => String(n).padStart(2, '0')
+    return (
+      d.getFullYear() +
+      '-' +
+      pad(d.getMonth() + 1) +
+      '-' +
+      pad(d.getDate()) +
+      ' ' +
+      pad(d.getHours()) +
+      ':' +
+      pad(d.getMinutes())
     )
-    if (!res.ok) throw new Error('Network error')
-    const data = await res.json()
-    if (data && data.error) throw new Error('GASエラー: ' + data.error)
-    return data
-  } catch (e) {
-    console.error('GAS通信エラー:', e)
-    throw e
+  } catch {
+    return String(v)
   }
 }
 
@@ -360,6 +441,14 @@ export default function GenroinConsole() {
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
 
+  // ==== Phase 2: 喫煙所 / 元老院 / 案件 ====
+  const [activeTab, setActiveTab] = useState('judge') // 'judge' | 'smoking' | 'genroin' | 'task'
+  const [smokingForm, setSmokingForm] = useState({ content: '', tags: '', author: '' })
+  const [smokingList, setSmokingList] = useState([])
+  const [smokingListLoading, setSmokingListLoading] = useState(false)
+  const [smokingPosting, setSmokingPosting] = useState(false)
+  const [smokingProcessing, setSmokingProcessing] = useState(false)
+
   const handleInputChange = (e) => {
     const v = e.target.value
     setInput(v)
@@ -382,6 +471,69 @@ export default function GenroinConsole() {
       if (!titleEdited) setTitle(autoTitle(next, category))
       return next
     })
+  }
+
+  const handleTabChange = (next) => {
+    setActiveTab(next)
+    setError('')
+    if (next === 'smoking' && smokingList.length === 0) loadSmokingList()
+  }
+
+  const loadSmokingList = async () => {
+    setSmokingListLoading(true)
+    setError('')
+    try {
+      const r = await callGAS('list', { sheet: '喫煙所', unprocessedOnly: true })
+      setSmokingList(Array.isArray(r.items) ? r.items : [])
+    } catch (e) {
+      setError(e?.message || '一覧取得失敗')
+    } finally {
+      setSmokingListLoading(false)
+    }
+  }
+
+  const handleSmokingPost = async () => {
+    const content = smokingForm.content.trim()
+    if (!content || smokingPosting) return
+    setSmokingPosting(true)
+    setError('')
+    try {
+      const r = await callGAS('addSmoking', {
+        data: {
+          content,
+          tags: smokingForm.tags.trim(),
+          author: smokingForm.author.trim(),
+        },
+      })
+      showToast('投稿しました: ' + r.id)
+      setSmokingForm({ content: '', tags: '', author: smokingForm.author })
+      await loadSmokingList()
+    } catch (e) {
+      setError(e?.message || '投稿失敗')
+    } finally {
+      setSmokingPosting(false)
+    }
+  }
+
+  const handleSmokingProcess = async () => {
+    if (smokingProcessing) return
+    setSmokingProcessing(true)
+    setError('')
+    try {
+      const r = await callGAS('processSmoking', { max: 20 })
+      const n = r.processed || 0
+      const errN = (r.errors || []).length
+      if (n === 0 && errN === 0) {
+        showToast('未処理ゼロ')
+      } else {
+        showToast('AI処理 ' + n + ' 件 (失敗' + errN + ')')
+      }
+      await loadSmokingList()
+    } catch (e) {
+      setError(e?.message || 'AI処理失敗')
+    } finally {
+      setSmokingProcessing(false)
+    }
   }
 
   const toggleFlag = (id, key) => {
@@ -448,7 +600,7 @@ export default function GenroinConsole() {
     try {
       const relevant = searchRelevantLogs(history, snapshotInput, category)
       const userPrompt = buildUserPrompt(category, snapshotInput, relevant)
-      const r = await callGAS(SYSTEM_PROMPT, userPrompt)
+      const r = await callGAS('consensus', { system: SYSTEM_PROMPT, user: userPrompt })
       const entry = {
         id: nowStamp() + '-' + Math.random().toString(36).slice(2, 8),
         timestamp: nowStamp(),
@@ -485,6 +637,40 @@ export default function GenroinConsole() {
           <h1 style={styles.title}>元老院コンソール</h1>
           <p style={styles.subtitle}>AI司令塔 — 指示・記録・判断の一元管理</p>
         </div>
+
+        <div style={styles.tabBar}>
+          {[
+            { key: 'judge', label: 'AI判断' },
+            { key: 'smoking', label: '喫煙所' },
+            { key: 'genroin', label: '元老院' },
+            { key: 'task', label: '案件' },
+          ].map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              style={styles.tabBtn(activeTab === t.key)}
+              onClick={() => handleTabChange(t.key)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {error && (
+          <div
+            style={{
+              ...styles.card,
+              borderColor: '#fecaca',
+              background: '#fef2f2',
+              color: '#b91c1c',
+              fontSize: 13,
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        {activeTab === 'judge' && (<>
 
         <div style={styles.card}>
           <div style={styles.fieldRow}>
@@ -580,20 +766,6 @@ export default function GenroinConsole() {
             {loading ? '実行中…' : '実行'}
           </button>
         </div>
-
-        {error && (
-          <div
-            style={{
-              ...styles.card,
-              borderColor: '#fecaca',
-              background: '#fef2f2',
-              color: '#b91c1c',
-              fontSize: 13,
-            }}
-          >
-            {error}
-          </div>
-        )}
 
         {result && (
           <div style={styles.card}>
@@ -702,6 +874,138 @@ export default function GenroinConsole() {
             })
           )}
         </div>
+
+        </>)}
+
+        {activeTab === 'smoking' && (
+          <>
+            <div style={styles.card}>
+              <div style={styles.fieldRow}>
+                <span style={styles.label}>内容</span>
+                <textarea
+                  style={styles.textarea}
+                  value={smokingForm.content}
+                  onChange={(e) =>
+                    setSmokingForm({ ...smokingForm, content: e.target.value })
+                  }
+                  placeholder="思いついたこと・課題・アイデアを自由に投稿"
+                />
+              </div>
+              <div style={styles.fieldRow}>
+                <span style={styles.label}>タグ（カンマ区切り任意）</span>
+                <input
+                  type="text"
+                  style={styles.input}
+                  value={smokingForm.tags}
+                  onChange={(e) =>
+                    setSmokingForm({ ...smokingForm, tags: e.target.value })
+                  }
+                  placeholder="EC, 在庫, 至急"
+                />
+              </div>
+              <div style={styles.fieldRow}>
+                <span style={styles.label}>投稿者</span>
+                <input
+                  type="text"
+                  style={styles.input}
+                  value={smokingForm.author}
+                  onChange={(e) =>
+                    setSmokingForm({ ...smokingForm, author: e.target.value })
+                  }
+                  placeholder="名前"
+                />
+              </div>
+              <div style={styles.rowActions}>
+                <button
+                  type="button"
+                  style={styles.primaryBtn(
+                    !smokingForm.content.trim() || smokingPosting,
+                  )}
+                  disabled={!smokingForm.content.trim() || smokingPosting}
+                  onClick={handleSmokingPost}
+                >
+                  {smokingPosting ? '投稿中…' : '投稿'}
+                </button>
+                <button
+                  type="button"
+                  style={styles.secondaryBtn(smokingProcessing)}
+                  disabled={smokingProcessing}
+                  onClick={handleSmokingProcess}
+                >
+                  {smokingProcessing ? 'AI処理中…' : 'AI処理（未処理を一括構造化）'}
+                </button>
+              </div>
+            </div>
+
+            <div style={styles.card}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: 6,
+                }}
+              >
+                <div style={styles.label}>
+                  未処理一覧（{smokingList.length}件）
+                </div>
+                <button
+                  type="button"
+                  style={styles.secondaryBtn(smokingListLoading)}
+                  disabled={smokingListLoading}
+                  onClick={loadSmokingList}
+                >
+                  {smokingListLoading ? '読込中…' : '再読込'}
+                </button>
+              </div>
+              {smokingList.length === 0 ? (
+                <div style={styles.emptyHistory}>
+                  {smokingListLoading ? '読み込み中…' : '未処理はありません'}
+                </div>
+              ) : (
+                smokingList.map((s, i) => (
+                  <div key={s['喫煙所ID'] || i} style={styles.smokingItem}>
+                    <div>
+                      <span style={styles.badge}>{s['喫煙所ID']}</span>
+                      <span style={styles.meta}>{formatTimestamp(s['日時'])}</span>
+                      {s['投稿者'] && (
+                        <span style={{ ...styles.meta, marginLeft: 8 }}>
+                          by {s['投稿者']}
+                        </span>
+                      )}
+                      {s['タグ'] && (
+                        <span style={{ ...styles.meta, marginLeft: 8 }}>
+                          #{s['タグ']}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ color: '#333', marginTop: 2 }}>
+                      {s['内容']}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </>
+        )}
+
+        {activeTab === 'genroin' && (
+          <div style={styles.card}>
+            <div style={styles.placeholder}>
+              元老院タブは Phase 3 で実装します。
+              <br />
+              現在は GAS 直接（list action）でデータ確認可能。
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'task' && (
+          <div style={styles.card}>
+            <div style={styles.placeholder}>
+              案件タブは Phase 3 で実装します。
+            </div>
+          </div>
+        )}
       </div>
       {toast && <div style={styles.toast}>{toast}</div>}
     </div>
