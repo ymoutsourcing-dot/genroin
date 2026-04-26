@@ -339,110 +339,143 @@ const baseStyles = {
 }
 
 function buildStyles(g) {
-  // g = genroinMode (true = full regal, false = subdued dark)
+  // g = genroinMode (true = dark+gold regal, false = light/white normal)
+  if (g) {
+    // ============ ON: 黒+金 フル ============
+    return {
+      ...baseStyles,
+      title: { ...baseStyles.title, color: '#fbbf24', letterSpacing: 2 },
+      subtitle: { ...baseStyles.subtitle, color: '#9ca3af', letterSpacing: 1 },
+      card: {
+        ...baseStyles.card,
+        background: 'linear-gradient(180deg, #1a1a1a 0%, #141414 100%)',
+        border: '1px solid #3a2f15',
+        boxShadow: '0 2px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(212,160,23,0.08)',
+      },
+      label: { ...baseStyles.label, color: '#d4a017', letterSpacing: 1 },
+      resultLabel: { ...baseStyles.resultLabel, color: '#d4a017', letterSpacing: 1 },
+      badge: { ...baseStyles.badge, background: '#2a2418', color: '#d4a017', letterSpacing: 0.5 },
+      badgeImportant: { ...baseStyles.badgeImportant, background: '#d4a017', color: '#0a0a0a' },
+      tabBtn: (active) => ({
+        ...baseStyles.tabBtn(active),
+        color: active ? '#fbbf24' : '#9ca3af',
+        borderBottom: active ? '3px solid #fbbf24' : '3px solid transparent',
+        textShadow: active ? '0 0 8px rgba(251,191,36,0.4)' : 'none',
+      }),
+      quickBtnImportant: { ...baseStyles.quickBtnImportant },
+    }
+  }
+  // ============ OFF: 白基調ライトテーマ ============
   return {
     ...baseStyles,
-    title: {
-      ...baseStyles.title,
-      color: g ? '#fbbf24' : '#e8e8e8',
-      letterSpacing: g ? 2 : 0,
+    page: {
+      ...baseStyles.page,
+      background: '#f6f7f9',
+      color: '#1a1a1a',
     },
-    subtitle: {
-      ...baseStyles.subtitle,
-      color: g ? '#9ca3af' : '#9ca3af',
-      letterSpacing: g ? 1 : 0,
-    },
+    title: { ...baseStyles.title, color: '#1a1a1a', letterSpacing: 0 },
+    subtitle: { ...baseStyles.subtitle, color: '#666', letterSpacing: 0 },
     card: {
       ...baseStyles.card,
-      background: g
-        ? 'linear-gradient(180deg, #1a1a1a 0%, #141414 100%)'
-        : '#161616',
-      border: '1px solid ' + (g ? '#3a2f15' : '#2a2a2a'),
-      boxShadow: g
-        ? '0 2px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(212,160,23,0.08)'
-        : '0 1px 4px rgba(0,0,0,0.3)',
+      background: '#ffffff',
+      border: '1px solid #e5e7eb',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
     },
-    label: {
-      ...baseStyles.label,
-      color: g ? '#d4a017' : '#9ca3af',
-      letterSpacing: g ? 1 : 0,
+    label: { ...baseStyles.label, color: '#444', letterSpacing: 0 },
+    input: {
+      ...baseStyles.input,
+      background: '#ffffff',
+      color: '#1a1a1a',
+      border: '1px solid #d1d5db',
+    },
+    textarea: {
+      ...baseStyles.textarea,
+      background: '#ffffff',
+      color: '#1a1a1a',
+      border: '1px solid #d1d5db',
     },
     catBtn: (active) => ({
       ...baseStyles.catBtn(active),
-      border: '1px solid ' + (active ? (g ? '#d4a017' : '#5a5a5a') : '#3a2f15'),
-      background: active ? (g ? '#d4a017' : '#3a3a3a') : '#1a1a1a',
-      color: active ? (g ? '#0a0a0a' : '#fff') : '#e8e8e8',
+      border: '1px solid ' + (active ? '#111' : '#d1d5db'),
+      background: active ? '#111' : '#ffffff',
+      color: active ? '#fff' : '#333',
+      fontWeight: active ? 700 : 500,
     }),
     runBtn: (disabled) => ({
       ...baseStyles.runBtn(disabled),
-      border: '1px solid ' + (disabled ? '#3a2f15' : g ? '#d4a017' : '#5a5a5a'),
-      background: disabled
-        ? '#1a1a1a'
-        : g
-          ? 'linear-gradient(180deg, #fbbf24 0%, #d4a017 100%)'
-          : '#3a3a3a',
-      color: disabled ? '#6b7280' : g ? '#0a0a0a' : '#fff',
-      letterSpacing: g ? 1 : 0,
-      boxShadow: disabled ? 'none' : g ? '0 2px 8px rgba(212,160,23,0.3)' : 'none',
+      border: 'none',
+      background: disabled ? '#bbbbbb' : '#111',
+      color: '#fff',
+      letterSpacing: 0,
+      boxShadow: 'none',
     }),
     primaryBtn: (disabled) => ({
       ...baseStyles.primaryBtn(disabled),
-      border: '1px solid ' + (disabled ? '#3a2f15' : g ? '#d4a017' : '#5a5a5a'),
-      background: disabled
-        ? '#1a1a1a'
-        : g
-          ? 'linear-gradient(180deg, #fbbf24 0%, #d4a017 100%)'
-          : '#3a3a3a',
-      color: disabled ? '#6b7280' : g ? '#0a0a0a' : '#fff',
-      letterSpacing: g ? 1 : 0,
+      border: 'none',
+      background: disabled ? '#bbbbbb' : '#111',
+      color: '#fff',
+      letterSpacing: 0,
     }),
     secondaryBtn: (disabled) => ({
       ...baseStyles.secondaryBtn(disabled),
-      color: disabled ? '#6b7280' : g ? '#d4a017' : '#9ca3af',
+      border: '1px solid #d1d5db',
+      background: '#ffffff',
+      color: disabled ? '#aaa' : '#374151',
     }),
-    resultLabel: {
-      ...baseStyles.resultLabel,
-      color: g ? '#d4a017' : '#9ca3af',
-      letterSpacing: g ? 1 : 0,
+    resultBlock: {
+      ...baseStyles.resultBlock,
+      background: '#fafafa',
+      border: '1px solid #eee',
+      color: '#1a1a1a',
     },
-    badge: {
-      ...baseStyles.badge,
-      background: g ? '#2a2418' : '#2a2a2a',
-      color: g ? '#d4a017' : '#9ca3af',
-      letterSpacing: g ? 0.5 : 0,
-    },
-    badgeImportant: {
-      ...baseStyles.badgeImportant,
-      background: g ? '#d4a017' : '#a16207',
-      color: g ? '#0a0a0a' : '#fef3c7',
-    },
+    resultLabel: { ...baseStyles.resultLabel, color: '#888', letterSpacing: 0 },
+    historyItemDyn: (important, active) => ({
+      ...baseStyles.historyItemDyn(important, active),
+      borderTop: '1px solid #f0f0f0',
+      background: important ? '#fffbeb' : 'transparent',
+      borderLeft: important ? '3px solid #facc15' : '3px solid transparent',
+      color: active ? '#1a1a1a' : '#9ca3af',
+      opacity: active ? 1 : 0.5,
+    }),
+    badge: { ...baseStyles.badge, background: '#eef2f7', color: '#374151', letterSpacing: 0 },
+    badgeImportant: { ...baseStyles.badgeImportant, background: '#fde68a', color: '#92400e' },
+    meta: { ...baseStyles.meta, color: '#888' },
+    emptyHistory: { ...baseStyles.emptyHistory, color: '#999', fontStyle: 'normal' },
+    tmplBtn: { ...baseStyles.tmplBtn, border: '1px solid #d1d5db', background: '#ffffff', color: '#374151' },
+    flagRow: { ...baseStyles.flagRow, color: '#666' },
+    tabBar: { ...baseStyles.tabBar, borderBottom: '1px solid #e5e7eb' },
     tabBtn: (active) => ({
       ...baseStyles.tabBtn(active),
-      color: active ? (g ? '#fbbf24' : '#e8e8e8') : '#9ca3af',
-      borderBottom: active
-        ? '3px solid ' + (g ? '#fbbf24' : '#5a5a5a')
-        : '3px solid transparent',
-      textShadow: active && g ? '0 0 8px rgba(251,191,36,0.4)' : 'none',
+      color: active ? '#111' : '#6b7280',
+      borderBottom: active ? '3px solid #111' : '3px solid transparent',
+      textShadow: 'none',
     }),
-    quickBtnImportant: {
-      ...baseStyles.quickBtnImportant,
-      background: g
-        ? 'linear-gradient(180deg, #fbbf24 0%, #d4a017 100%)'
-        : '#a16207',
-      color: g ? '#0a0a0a' : '#fef3c7',
-      border: '1px solid ' + (g ? '#d4a017' : '#92400e'),
-    },
+    smokingItem: { ...baseStyles.smokingItem, borderTop: '1px solid #f0f0f0' },
+    placeholder: { ...baseStyles.placeholder, color: '#9ca3af', fontStyle: 'normal' },
+    quickBtnImportant: { ...baseStyles.quickBtnImportant, border: '1px solid #eab308', background: '#facc15', color: '#7c2d12' },
+    quickBtnDiscard: { ...baseStyles.quickBtnDiscard, border: '1px solid #d1d5db', background: '#e5e7eb', color: '#374151' },
+    quickBtnHold: { ...baseStyles.quickBtnHold, border: '1px solid #d1d5db', background: '#ffffff', color: '#6b7280' },
+    fileBtn: { ...baseStyles.fileBtn, border: '1px dashed #9ca3af', background: '#fafafa', color: '#444' },
+    thumb: { ...baseStyles.thumb, border: '1px solid #e5e7eb' },
+    thumbRemove: { ...baseStyles.thumbRemove, background: '#111', color: '#fff' },
     toast: {
       ...baseStyles.toast,
-      background: g
-        ? 'linear-gradient(180deg, #1a1a1a 0%, #0d0d0d 100%)'
-        : '#1a1a1a',
-      color: g ? '#fbbf24' : '#e8e8e8',
-      border: '1px solid ' + (g ? '#d4a017' : '#3a3a3a'),
-      boxShadow: g
-        ? '0 4px 16px rgba(212,160,23,0.3)'
-        : '0 4px 12px rgba(0,0,0,0.5)',
+      background: 'rgba(17,17,17,0.92)',
+      color: '#ffffff',
+      border: 'none',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.18)',
+      fontWeight: 600,
+      letterSpacing: 0,
     },
+    deliberating: { ...baseStyles.deliberating, color: '#111' },
+    loadingLineWrap: { ...baseStyles.loadingLineWrap, background: 'rgba(17,17,17,0.1)' },
+    loadingLine: { ...baseStyles.loadingLine, background: 'linear-gradient(90deg, transparent, #111, transparent)' },
+    toggleBtn: (on) => ({
+      ...baseStyles.toggleBtn(on),
+      background: on ? 'linear-gradient(180deg, #fbbf24 0%, #d4a017 100%)' : '#ffffff',
+      color: on ? '#0a0a0a' : '#374151',
+      border: '1px solid ' + (on ? '#d4a017' : '#d1d5db'),
+    }),
   }
 }
 
@@ -550,14 +583,19 @@ async function callGAS(action, body) {
   return data
 }
 
-function priorityBadgeStyle(p) {
+function priorityBadgeStyle(p, g) {
   const v = String(p || '').toUpperCase()
-  const colors = {
+  const dark = {
     A: { bg: '#7f1d1d', fg: '#fecaca' },
     B: { bg: '#78350f', fg: '#fde68a' },
     C: { bg: '#1f2937', fg: '#9ca3af' },
   }
-  const c = colors[v] || colors.C
+  const light = {
+    A: { bg: '#fee2e2', fg: '#991b1b' },
+    B: { bg: '#fef3c7', fg: '#92400e' },
+    C: { bg: '#f3f4f6', fg: '#4b5563' },
+  }
+  const c = (g ? dark : light)[v] || (g ? dark : light).C
   return {
     display: 'inline-block',
     fontSize: 11,
@@ -570,28 +608,41 @@ function priorityBadgeStyle(p) {
   }
 }
 
-function adoptionBadgeStyle(a) {
+function adoptionBadgeStyle(a, g) {
   const isYes = a === 'Yes'
+  const dark = isYes
+    ? { bg: '#064e3b', fg: '#6ee7b7' }
+    : { bg: '#7f1d1d', fg: '#fecaca' }
+  const light = isYes
+    ? { bg: '#d1fae5', fg: '#065f46' }
+    : { bg: '#fee2e2', fg: '#991b1b' }
+  const c = g ? dark : light
   return {
     display: 'inline-block',
     fontSize: 11,
     padding: '2px 8px',
     borderRadius: 999,
-    background: isYes ? '#064e3b' : '#7f1d1d',
-    color: isYes ? '#6ee7b7' : '#fecaca',
+    background: c.bg,
+    color: c.fg,
     marginLeft: 4,
     fontWeight: 700,
   }
 }
 
-function statusBadgeStyle(s) {
-  const map = {
+function statusBadgeStyle(s, g) {
+  const dark = {
     未着手: { bg: '#1f2937', fg: '#9ca3af' },
     進行中: { bg: '#78350f', fg: '#fde68a' },
     完了: { bg: '#064e3b', fg: '#6ee7b7' },
     中止: { bg: '#7f1d1d', fg: '#fecaca' },
   }
-  const c = map[s] || map['未着手']
+  const light = {
+    未着手: { bg: '#f3f4f6', fg: '#4b5563' },
+    進行中: { bg: '#fef3c7', fg: '#92400e' },
+    完了: { bg: '#d1fae5', fg: '#065f46' },
+    中止: { bg: '#fee2e2', fg: '#991b1b' },
+  }
+  const c = (g ? dark : light)[s] || (g ? dark : light)['未着手']
   return {
     display: 'inline-block',
     fontSize: 11,
@@ -1025,9 +1076,9 @@ export default function GenroinConsole() {
           <div
             style={{
               ...styles.card,
-              borderColor: '#fecaca',
-              background: '#fef2f2',
-              color: '#b91c1c',
+              borderColor: genroinMode ? '#7f1d1d' : '#fecaca',
+              background: genroinMode ? '#1f0a0a' : '#fef2f2',
+              color: genroinMode ? '#fecaca' : '#b91c1c',
               fontSize: 13,
             }}
           >
@@ -1180,8 +1231,8 @@ export default function GenroinConsole() {
                       display: 'inline-block',
                       padding: '6px 18px',
                       borderRadius: 6,
-                      background: '#0a0a0a',
-                      border: '1px solid ' + (genroinMode ? '#d4a017' : '#3a3a3a'),
+                      background: genroinMode ? '#0a0a0a' : '#ffffff',
+                      border: '1px solid ' + (genroinMode ? '#d4a017' : '#d1d5db'),
                       color: fg,
                       fontWeight: 700,
                       fontSize: 16,
@@ -1441,7 +1492,7 @@ export default function GenroinConsole() {
                         </span>
                       )}
                     </div>
-                    <div style={{ color: '#e8e8e8', marginTop: 2 }}>
+                    <div style={{ color: genroinMode ? '#e8e8e8' : '#1a1a1a', marginTop: 2 }}>
                       {s['内容']}
                     </div>
                   </div>
@@ -1495,26 +1546,34 @@ export default function GenroinConsole() {
                   <div
                     key={id || i}
                     style={{
-                      borderTop: '1px solid #2a2418',
+                      borderTop: '1px solid ' + (genroinMode ? '#2a2418' : '#f0f0f0'),
                       padding: '14px 4px',
                     }}
                   >
                     <div style={{ marginBottom: 6 }}>
                       <span style={styles.badge}>{id}</span>
-                      <strong style={{ color: '#e8e8e8' }}>{g['タイトル']}</strong>
+                      <strong style={{ color: genroinMode ? '#e8e8e8' : '#1a1a1a' }}>
+                        {g['タイトル']}
+                      </strong>
                       <span style={{ ...styles.badge, marginLeft: 8 }}>
                         {g['カテゴリ']}
                       </span>
-                      <span style={priorityBadgeStyle(g['優先度'])}>
+                      <span style={priorityBadgeStyle(g['優先度'], genroinMode)}>
                         優{g['優先度']}
                       </span>
                       {adoption && (
-                        <span style={adoptionBadgeStyle(adoption)}>
+                        <span style={adoptionBadgeStyle(adoption, genroinMode)}>
                           {adoption === 'Yes' ? '採用' : '不採用'}
                         </span>
                       )}
                     </div>
-                    <div style={{ color: '#cbd5e1', marginBottom: 8, fontSize: 13 }}>
+                    <div
+                      style={{
+                        color: genroinMode ? '#cbd5e1' : '#555',
+                        marginBottom: 8,
+                        fontSize: 13,
+                      }}
+                    >
                       {g['要約']}
                     </div>
 
@@ -1624,26 +1683,28 @@ export default function GenroinConsole() {
                   <div
                     key={id || i}
                     style={{
-                      borderTop: '1px solid #2a2418',
+                      borderTop: '1px solid ' + (genroinMode ? '#2a2418' : '#f0f0f0'),
                       padding: '14px 4px',
                     }}
                   >
                     <div style={{ marginBottom: 4 }}>
                       <span style={styles.badge}>{id}</span>
-                      <strong style={{ color: '#e8e8e8' }}>{t['タイトル']}</strong>
-                      <span style={statusBadgeStyle(status)}>{status}</span>
+                      <strong style={{ color: genroinMode ? '#e8e8e8' : '#1a1a1a' }}>
+                        {t['タイトル']}
+                      </strong>
+                      <span style={statusBadgeStyle(status, genroinMode)}>{status}</span>
                       {t['カテゴリ'] && (
                         <span style={{ ...styles.badge, marginLeft: 8 }}>
                           {t['カテゴリ']}
                         </span>
                       )}
                       {t['優先度'] && (
-                        <span style={priorityBadgeStyle(t['優先度'])}>
+                        <span style={priorityBadgeStyle(t['優先度'], genroinMode)}>
                           優{t['優先度']}
                         </span>
                       )}
                     </div>
-                    <div style={{ color: '#9ca3af', fontSize: 12 }}>
+                    <div style={{ color: genroinMode ? '#9ca3af' : '#666', fontSize: 12 }}>
                       {t['担当者'] && '担当: ' + t['担当者']}
                       {t['期限'] && (
                         <span style={{ marginLeft: 12 }}>
@@ -1670,8 +1731,8 @@ export default function GenroinConsole() {
                         style={{
                           marginTop: 8,
                           padding: 12,
-                          background: '#0d0d0d',
-                          border: '1px solid #3a2f15',
+                          background: genroinMode ? '#0d0d0d' : '#fafafa',
+                          border: '1px solid ' + (genroinMode ? '#3a2f15' : '#e5e7eb'),
                           borderRadius: 8,
                         }}
                       >
