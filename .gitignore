@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+.vercel
+.env*.local
+
+# local temp / source artifacts
+_*.gs
+_*.b64
+FFGoogleDrive*

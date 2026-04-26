@@ -299,9 +299,6 @@ function buildUserPrompt(category, input, relevant) {
   )
 }
 
-const GAS_URL =
-  'https://script.google.com/macros/s/AKfycbzGMnq2PCB2zXkpz_-a2DNH0svR-TCLJnyTqCD2Bts-YYp2ur0PUv-IQEFFJgz-Brjy/exec'
-
 const SYSTEM_PROMPT =
   'あなたは事業責任者の意思決定補助AIです。\n\n' +
   '以下のルールを厳守してください：\n\n' +
@@ -314,22 +311,22 @@ const SYSTEM_PROMPT =
   '【理由】ビジネス的根拠（簡潔）'
 
 async function callGAS(system, user) {
-  const res = await fetch(GAS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ system, user, secret: 'abc123' }),
-  })
-  if (!res.ok) {
-    const t = await res.text().catch(() => '')
-    throw new Error('GASエラー (' + res.status + '): ' + t.slice(0, 200))
-  }
-  const data = await res.json()
-  if (data?.error) throw new Error('GASエラー: ' + data.error)
-  return {
-    judgment: data.judgment,
-    conclusion: data.conclusion,
-    reason: data.reason,
-    votes: data.votes,
+  try {
+    const res = await fetch(
+      'https://script.google.com/macros/s/AKfycbzGMnq2PCB2zXkpz_-a2DNH0svR-TCLJnyTqCD2Bts-YYp2ur0PUv-IQEFFJgz-Brjy/exec',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ system, user, secret: 'abc123' }),
+      },
+    )
+    if (!res.ok) throw new Error('Network error')
+    const data = await res.json()
+    if (data && data.error) throw new Error('GASエラー: ' + data.error)
+    return data
+  } catch (e) {
+    console.error('GAS通信エラー:', e)
+    throw e
   }
 }
 
