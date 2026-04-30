@@ -1184,13 +1184,42 @@ export default function GenroinConsole() {
     }
   }
 
+  // 議題から指示書テンプレを生成
+  const buildInstructions = (g) => {
+    const title = String(g['タイトル'] || '')
+    const summary = String(g['要約'] || '')
+    // AI審議の「採用理由：」があればそれを「目的」に流用、無ければ要約
+    const review = String(g['AI審議コメント'] || '')
+    const reasonMatch = review.match(/■\s*採用理由：\s*\n?([\s\S]*?)(?=\n*■|$)/)
+    const reason = reasonMatch ? reasonMatch[1].trim() : summary
+    const content = summary || title
+    return (
+      '【目的】\n' + reason + '\n\n' +
+      '【やること】\n' + content + '\n\n' +
+      '【手順】\n1. 処理整理\n2. 実装\n3. 動作確認\n\n' +
+      '【完了条件】\n・目的達成\n・エラーなし'
+    )
+  }
+
   const handleAdoption = async (id, value) => {
     if (genroinBusyId) return
     setGenroinBusyId(id)
     setError('')
     try {
-      await callGAS('updateGenroin', { genroinId: id, adoption: value })
-      showToast(T('採用可否更新: ', '採用更新: ') + (value || T('未決', '未決定')))
+      if (value === 'Yes') {
+        // Yes 採用 → 指示書生成 + 採用更新 + 案件作成 をまとめて
+        const item = genroinList.find((g) => g['元老院ID'] === id)
+        const instructions = item ? buildInstructions(item) : ''
+        const r = await callGAS('adoptAndCreateTask', {
+          genroinId: id,
+          instructions,
+        })
+        showToast(T('採用→勅命下達: ', '採用→案件作成: ') + r.taskId)
+        if (taskList.length > 0) await loadTaskList()
+      } else {
+        await callGAS('updateGenroin', { genroinId: id, adoption: value })
+        showToast(T('採用可否更新: ', '採用更新: ') + (value || T('未決', '未決定')))
+      }
       setAiSuggestion(null)
       await loadGenroinList()
     } catch (e) {
@@ -2861,6 +2890,44 @@ export default function GenroinConsole() {
                         <span style={{ marginLeft: 12 }}>← {t['元老院ID']}</span>
                       )}
                     </div>
+                    {t['指示書'] && (
+                      <details
+                        style={{
+                          marginTop: 6,
+                          fontSize: 12,
+                          padding: '6px 10px',
+                          borderRadius: 6,
+                          background: genroinMode
+                            ? 'rgba(0,0,0,0.4)'
+                            : '#fafafa',
+                          border:
+                            '1px solid ' +
+                            (genroinMode ? 'rgba(251,191,36,0.3)' : '#e5e7eb'),
+                        }}
+                      >
+                        <summary
+                          style={{
+                            cursor: 'pointer',
+                            color: genroinMode ? '#d4a017' : '#374151',
+                            fontWeight: 600,
+                          }}
+                        >
+                          📋 {T('指示書', '指示書')}
+                        </summary>
+                        <pre
+                          style={{
+                            margin: '6px 0 0',
+                            whiteSpace: 'pre-wrap',
+                            fontFamily: 'inherit',
+                            fontSize: 12,
+                            lineHeight: 1.6,
+                            color: genroinMode ? '#fef3c7' : '#374151',
+                          }}
+                        >
+                          {t['指示書']}
+                        </pre>
+                      </details>
+                    )}
                     <div style={styles.rowActions}>
                       <button
                         type="button"
