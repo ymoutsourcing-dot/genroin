@@ -1075,6 +1075,7 @@ export default function GenroinConsole() {
   const [genroinMemoEdits, setGenroinMemoEdits] = useState({}) // {id: memo}
   const [genroinBusyId, setGenroinBusyId] = useState(null) // id currently being updated
   const [aiReviewBusyId, setAiReviewBusyId] = useState(null) // id currently being AI-reviewed
+  const [aiReviewFeedback, setAiReviewFeedback] = useState({}) // {id: feedback text}
 
   // 勅命（案件）
   const [taskList, setTaskList] = useState([])
@@ -1215,16 +1216,29 @@ export default function GenroinConsole() {
 
   const handleAiReview = async (id) => {
     if (aiReviewBusyId) return
+    const feedback = (aiReviewFeedback[id] || '').trim()
     setAiReviewBusyId(id)
     setError('')
     try {
-      const r = await callGAS('aiReview', { genroinId: id })
+      const action = feedback ? 'aiReviewWithFeedback' : 'aiReview'
+      const payload = feedback
+        ? { genroinId: id, feedback }
+        : { genroinId: id }
+      const r = await callGAS(action, payload)
       setGenroinList((list) =>
         list.map((g) =>
           g['元老院ID'] === id ? { ...g, 'AI審議コメント': r.review } : g,
         ),
       )
-      showToast(T('御審議: 完了', 'AI審議: 完了'))
+      // 反映済みフィードバックは消す
+      if (feedback) {
+        setAiReviewFeedback((m) => ({ ...m, [id]: '' }))
+      }
+      showToast(
+        feedback
+          ? T('御審議: 反映完了', 'AI審議: 反映完了')
+          : T('御審議: 完了', 'AI審議: 完了'),
+      )
     } catch (e) {
       setError(e?.message || 'AI審議失敗')
     } finally {
@@ -2503,6 +2517,8 @@ export default function GenroinConsole() {
                         color: genroinMode ? '#fef3c7' : '#374151',
                       }
                       if (review) {
+                        const feedback = aiReviewFeedback[id] || ''
+                        const hasFeedback = !!feedback.trim()
                         return (
                           <div style={boxStyle}>
                             <pre
@@ -2516,6 +2532,26 @@ export default function GenroinConsole() {
                             >
                               {review}
                             </pre>
+                            <div style={{ marginTop: 8 }}>
+                              <textarea
+                                style={{
+                                  ...styles.textarea,
+                                  minHeight: 48,
+                                  fontSize: 12,
+                                }}
+                                value={feedback}
+                                onChange={(e) =>
+                                  setAiReviewFeedback((m) => ({
+                                    ...m,
+                                    [id]: e.target.value,
+                                  }))
+                                }
+                                placeholder={T(
+                                  '陛下のコメント（任意：再審議に反映）',
+                                  'コメント（任意：再審議に反映）',
+                                )}
+                              />
+                            </div>
                             <div style={{ ...styles.rowActions, marginTop: 6 }}>
                               <button
                                 type="button"
@@ -2538,6 +2574,8 @@ export default function GenroinConsole() {
                                       <span style={styles.loadingLine} />
                                     </span>
                                   </span>
+                                ) : hasFeedback ? (
+                                  T('再御審議（反映）', '再審議（反映）')
                                 ) : (
                                   T('再御審議', '再審議')
                                 )}
