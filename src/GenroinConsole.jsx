@@ -1050,6 +1050,17 @@ export default function GenroinConsole() {
     }
   })
 
+  // 通知ディスミス（sessionStorage）
+  const [notifDismissed, setNotifDismissed] = useState(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem('notifDismissed') || '[]')
+    } catch {
+      return []
+    }
+  })
+  // 期限超過判定の基準日（render 中の Date.now() 純度警告回避：初回 mount 時に確定）
+  const [todayIso] = useState(() => new Date().toISOString().slice(0, 10))
+
 
   const handleInputChange = (e) => {
     const v = e.target.value
@@ -1101,6 +1112,7 @@ export default function GenroinConsole() {
       const r = await callGAS('list', { sheet: '元老院' })
       setGenroinList(Array.isArray(r.items) ? r.items : [])
       setGenroinMemoEdits({})
+      clearNotifDismiss('priority-a')
     } catch (e) {
       setError(e?.message || '議事一覧取得失敗')
     } finally {
@@ -1164,6 +1176,7 @@ export default function GenroinConsole() {
     try {
       const r = await callGAS('list', { sheet: '案件' })
       setTaskList(Array.isArray(r.items) ? r.items : [])
+      clearNotifDismiss('overdue-task')
     } catch (e) {
       setError(e?.message || '勅命一覧取得失敗')
     } finally {
@@ -1371,6 +1384,59 @@ export default function GenroinConsole() {
     return '現状は安定。改善案の探索を推奨。'
   })()
 
+  // 通知ディスミス操作
+  const dismissNotif = (id) => {
+    if (notifDismissed.indexOf(id) >= 0) return
+    const next = [...notifDismissed, id]
+    setNotifDismissed(next)
+    try { sessionStorage.setItem('notifDismissed', JSON.stringify(next)) } catch { /* ignore */ }
+  }
+  const clearNotifDismiss = (id) => {
+    if (notifDismissed.indexOf(id) < 0) return
+    const next = notifDismissed.filter((x) => x !== id)
+    setNotifDismissed(next)
+    try { sessionStorage.setItem('notifDismissed', JSON.stringify(next)) } catch { /* ignore */ }
+  }
+
+  // 通知計算（render-derived）
+  const isOverdueDeadline = (deadline) => {
+    if (!deadline) return false
+    const d = String(deadline).slice(0, 10) // YYYY-MM-DD prefix
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return false
+    return d.localeCompare(todayIso) < 0
+  }
+  const priorityAUndecided = genroinList.filter(
+    (g) => g['優先度'] === 'A' && !g['採用可否'],
+  )
+  const overdueTasks = taskList.filter((t) => {
+    const s = t['ステータス']
+    if (s === '完了' || s === '中止') return false
+    return isOverdueDeadline(t['期限'])
+  })
+  const allNotifications = []
+  if (priorityAUndecided.length > 0) {
+    allNotifications.push({
+      id: 'priority-a',
+      icon: '⚠',
+      severity: 'critical',
+      message:
+        '優先度A 議題 ' + priorityAUndecided.length + ' 件 採用判断待ち',
+      tab: 'genroin',
+    })
+  }
+  if (overdueTasks.length > 0) {
+    allNotifications.push({
+      id: 'overdue-task',
+      icon: '⏰',
+      severity: 'warn',
+      message: '期限超過勅命 ' + overdueTasks.length + ' 件',
+      tab: 'task',
+    })
+  }
+  const visibleNotifications = allNotifications.filter(
+    (n) => notifDismissed.indexOf(n.id) < 0,
+  )
+
   useEffect(() => {
     const handler = (e) => {
       e.preventDefault()
@@ -1569,6 +1635,61 @@ export default function GenroinConsole() {
             元老院モード {genroinMode ? 'ON' : 'OFF'}
           </button>
         </div>
+
+        {visibleNotifications.map((n) => {
+          const colors =
+            n.severity === 'critical'
+              ? {
+                  bg: genroinMode ? 'rgba(127,29,29,0.35)' : '#fef2f2',
+                  border: genroinMode ? '#f87171' : '#fecaca',
+                  fg: genroinMode ? '#fecaca' : '#991b1b',
+                }
+              : {
+                  bg: genroinMode ? 'rgba(120,53,15,0.35)' : '#fffbeb',
+                  border: genroinMode ? '#fbbf24' : '#fcd34d',
+                  fg: genroinMode ? '#fde68a' : '#78350f',
+                }
+          return (
+            <div
+              key={n.id}
+              className="pwa-banner"
+              style={{
+                background: colors.bg,
+                border: '1px solid ' + colors.border,
+                color: colors.fg,
+              }}
+            >
+              <span style={{ flex: 1, fontWeight: 600 }}>
+                {n.icon} {n.message}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  handleTabChange(n.tab)
+                  dismissNotif(n.id)
+                }}
+                style={{
+                  background: colors.fg,
+                  color: colors.bg.indexOf('rgba(127') >= 0 || colors.bg.indexOf('rgba(120') >= 0 ? '#0a0a0a' : '#fff',
+                  border: 'none',
+                }}
+              >
+                確認
+              </button>
+              <button
+                type="button"
+                onClick={() => dismissNotif(n.id)}
+                style={{
+                  background: 'transparent',
+                  color: 'inherit',
+                  border: '1px solid currentColor',
+                }}
+              >
+                ×
+              </button>
+            </div>
+          )
+        })}
 
         {installEvent && !installDismissed && (
           <div
