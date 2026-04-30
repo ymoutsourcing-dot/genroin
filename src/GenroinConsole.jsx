@@ -535,7 +535,7 @@ function LeftPanelGenroin({ stats }) {
   )
 }
 
-function RightPanelGenroin({ recent, summary, suggestion, fallback, loading, error, onRefresh, backupProps }) {
+function RightPanelGenroin({ recent, summary, suggestion, fallback, loading, error, onRefresh, backupProps, actionables, busyId, onOneClick }) {
   return (
     <div className="panel genroin">
       <div
@@ -606,6 +606,53 @@ function RightPanelGenroin({ recent, summary, suggestion, fallback, loading, err
           <div style={{ fontSize: 11, marginTop: 6, opacity: 0.6 }}>
             （ローカル推論。「再進言」で GPT 分析）
           </div>
+        </div>
+      )}
+      {actionables && actionables.length > 0 && (
+        <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {actionables.map((a) => {
+            const busy = busyId === a.id
+            const adopted = a.adoption === 'Yes'
+            return (
+              <div
+                key={a.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '6px 8px',
+                  borderRadius: 6,
+                  background: 'rgba(251,191,36,0.08)',
+                  border: '1px solid rgba(251,191,36,0.3)',
+                  fontSize: 11,
+                }}
+              >
+                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <strong style={{ color: '#fbbf24' }}>{a.id}</strong>
+                  {' '}
+                  {a.title.slice(0, 14)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onOneClick(a.id)}
+                  disabled={busy}
+                  style={{
+                    padding: '4px 10px',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    borderRadius: 4,
+                    border: '1px solid #fbbf24',
+                    background: busy ? 'transparent' : 'linear-gradient(180deg, #fbbf24 0%, #d4a017 100%)',
+                    color: busy ? '#fbbf24' : '#0a0a0a',
+                    cursor: busy ? 'not-allowed' : 'pointer',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {busy ? '実行中…' : adopted ? '勅命化' : '即実行'}
+                </button>
+              </div>
+            )
+          })}
         </div>
       )}
       <h3 style={{ marginTop: 20 }}>議事ログ</h3>
@@ -1046,6 +1093,7 @@ export default function GenroinConsole() {
   const [aiSuggestion, setAiSuggestion] = useState(null)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
+  const [oneClickBusyId, setOneClickBusyId] = useState(null)
 
   // バックアップ
   const [backups, setBackups] = useState([])
@@ -1389,6 +1437,25 @@ export default function GenroinConsole() {
     }
   }
 
+  // AI進言テキストから C-YYYYMMDD-NNN 形式の議題IDを抽出してアクション化
+  const aiActionables = (() => {
+    if (!aiSuggestion) return []
+    const matches = String(aiSuggestion).match(/C-\d{8}-\d{3}/g) || []
+    const unique = Array.from(new Set(matches))
+    return unique
+      .map((id) => {
+        const item = genroinList.find((g) => g['元老院ID'] === id)
+        if (!item) return null
+        return {
+          id,
+          title: item['タイトル'] || '',
+          adoption: item['採用可否'] || '',
+          priority: item['優先度'] || '',
+        }
+      })
+      .filter((x) => x && x.adoption !== 'No') // 不採用は除外、未決と既採用は表示
+  })()
+
   const localFallbackSuggestion = (() => {
     const high = genroinList.filter((x) => x['優先度'] === 'A')
     const pending = smokingList.length
@@ -1603,6 +1670,38 @@ export default function GenroinConsole() {
       setError(e?.message || '復元失敗')
     } finally {
       setRestoreBusy(false)
+    }
+  }
+
+  // ワンクリック実行：AI進言中の議題IDを採用＋勅命化
+  const handleOneClick = async (id) => {
+    if (oneClickBusyId) return
+    const item = genroinList.find((g) => g['元老院ID'] === id)
+    if (!item) {
+      setError('議題が見つかりません: ' + id)
+      return
+    }
+    setOneClickBusyId(id)
+    setError('')
+    try {
+      // 未採用なら Yes に
+      if (item['採用可否'] !== 'Yes') {
+        await callGAS('updateGenroin', { genroinId: id, adoption: 'Yes' })
+      }
+      // 勅命作成
+      const r = await callGAS('createTask', { genroinId: id })
+      showToast('勅命下達: ' + r.taskId)
+      setAiSuggestion(null)
+      await loadGenroinList()
+      await loadTaskList()
+      // 勅命タブ移動オファー
+      if (window.confirm('勅命下達: ' + r.taskId + '\n\n勅命タブへ移動しますか？')) {
+        handleTabChange('task')
+      }
+    } catch (e) {
+      setError(e?.message || 'ワンクリック失敗')
+    } finally {
+      setOneClickBusyId(null)
     }
   }
 
@@ -2635,6 +2734,9 @@ export default function GenroinConsole() {
               loading={aiLoading}
               error={aiError}
               onRefresh={loadAiSuggestion}
+              actionables={aiActionables}
+              busyId={oneClickBusyId}
+              onOneClick={handleOneClick}
               backupProps={{
                 backups,
                 loading: backupsLoading,
