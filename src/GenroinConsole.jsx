@@ -908,7 +908,7 @@ const SYSTEM_PROMPT =
 
 const GAS_URL =
   'https://script.google.com/macros/s/AKfycbzGMnq2PCB2zXkpz_-a2DNH0svR-TCLJnyTqCD2Bts-YYp2ur0PUv-IQEFFJgz-Brjy/exec'
-const GAS_SECRET = 'abc123'
+const GAS_SECRET = 'vXrkAMH0xcSbnnWwgo5sO4EFGZdLHVzdetYoXVcG'
 
 async function callGAS(action, body) {
   const res = await fetch(GAS_URL, {
