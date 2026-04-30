@@ -1053,7 +1053,11 @@ export default function GenroinConsole() {
   const [toast, setToast] = useState('')
 
   // ==== Phase 2: 喫煙所 / 元老院 / 案件 ====
-  const [activeTab, setActiveTab] = useState(initialTab || 'judge') // 'judge' | 'smoking' | 'genroin' | 'task'
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window === 'undefined') return 'judge'
+    const t = new URLSearchParams(window.location.search).get('tab')
+    return ['judge', 'smoking', 'genroin', 'task'].indexOf(t) >= 0 ? t : 'judge'
+  })
   const [smokingForm, setSmokingForm] = useState({ content: '', tags: '', author: '' })
   const [smokingList, setSmokingList] = useState([])
   const [smokingListLoading, setSmokingListLoading] = useState(false)
@@ -1064,17 +1068,6 @@ export default function GenroinConsole() {
   const [genroinMode, setGenroinMode] = useState(false)
   const T = (regal, normal) => (genroinMode ? regal : normal)
   const styles = buildStyles(genroinMode)
-
-  // Deep Link：mount 時に URL から初期化
-  const initialTab = (() => {
-    if (typeof window === 'undefined') return 'judge'
-    const t = new URLSearchParams(window.location.search).get('tab')
-    return ['judge', 'smoking', 'genroin', 'task'].indexOf(t) >= 0 ? t : null
-  })()
-  const initialId = (() => {
-    if (typeof window === 'undefined') return null
-    return new URLSearchParams(window.location.search).get('id')
-  })()
 
   // 議事（元老院）
   const [genroinList, setGenroinList] = useState([])
@@ -1123,7 +1116,10 @@ export default function GenroinConsole() {
   const [todayIso] = useState(() => new Date().toISOString().slice(0, 10))
 
   // Deep Link：URLからの id 参照（mount時に初期化）
-  const [targetId, setTargetId] = useState(initialId)
+  const [targetId, setTargetId] = useState(() => {
+    if (typeof window === 'undefined') return null
+    return new URLSearchParams(window.location.search).get('id')
+  })
 
 
   const handleInputChange = (e) => {
@@ -1529,11 +1525,11 @@ export default function GenroinConsole() {
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])
 
-  // Deep Link：mount 時に initialTab に応じてリストロードをキック（setState せず）
+  // Deep Link：mount 時に activeTab（初期値=URLのtab）に応じてリストロードをキック（setState せず）
   useEffect(() => {
-    if (initialTab === 'smoking') loadSmokingList()
-    else if (initialTab === 'genroin') loadGenroinList()
-    else if (initialTab === 'task') loadTaskList()
+    if (activeTab === 'smoking') loadSmokingList()
+    else if (activeTab === 'genroin') loadGenroinList()
+    else if (activeTab === 'task') loadTaskList()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
