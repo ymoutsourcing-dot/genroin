@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 const CATEGORIES = ['EC', '買取', '新規事業', '管理']
 
@@ -732,6 +732,15 @@ const layoutCss = `
 .layout { display: flex; gap: 20px; max-width: 1800px; margin: 0 auto; padding: 0 20px; box-sizing: border-box; justify-content: center; }
 .side { width: 260px; flex-shrink: 0; }
 .main { flex: 1; max-width: 1100px; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+/* sticky タブバー */
+.sticky-tab { position: sticky; top: 0; z-index: 50; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+/* PWAバナー */
+.pwa-banner { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 8px; font-size: 12px; }
+.pwa-banner button { padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; }
+/* iOS safe-area + モバイル余白 */
+.layout { padding-bottom: env(safe-area-inset-bottom); padding-top: env(safe-area-inset-top); }
+/* タッチ最適化 */
+button { min-height: 32px; }
 
 /* パネル共通 */
 .panel { padding: 18px; border-radius: 12px; }
@@ -763,6 +772,7 @@ const layoutCss = `
 
 @keyframes genroinScan { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 @media (max-width: 1100px) { .side { display: none; } .layout { padding: 0 12px; max-width: 100%; } .main { min-width: 0; } }
+@media (max-width: 700px) { .layout { padding: 0 8px; gap: 0; } .main { gap: 12px; } }
 `
 
 function autoTitle(text, category) {
@@ -1029,6 +1039,16 @@ export default function GenroinConsole() {
   const [backupsLoading, setBackupsLoading] = useState(false)
   const [backupBusy, setBackupBusy] = useState(false)
   const [restoreBusy, setRestoreBusy] = useState(false)
+
+  // PWAインストール
+  const [installEvent, setInstallEvent] = useState(null)
+  const [installDismissed, setInstallDismissed] = useState(() => {
+    try {
+      return sessionStorage.getItem('pwaInstallDismissed') === '1'
+    } catch {
+      return false
+    }
+  })
 
 
   const handleInputChange = (e) => {
@@ -1351,6 +1371,51 @@ export default function GenroinConsole() {
     return '現状は安定。改善案の探索を推奨。'
   })()
 
+  useEffect(() => {
+    const handler = (e) => {
+      e.preventDefault()
+      setInstallEvent(e)
+    }
+    window.addEventListener('beforeinstallprompt', handler)
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
+
+  const handleInstall = async () => {
+    if (!installEvent) return
+    installEvent.prompt()
+    await installEvent.userChoice
+    setInstallEvent(null)
+  }
+
+  const dismissInstall = () => {
+    try { sessionStorage.setItem('pwaInstallDismissed', '1') } catch { /* ignore */ }
+    setInstallDismissed(true)
+  }
+
+  // スワイプでタブ切替
+  const tabKeys = ['judge', 'smoking', 'genroin', 'task']
+  const swipeStart = useRef({ x: 0, y: 0, t: 0 })
+  const handleTouchStart = (e) => {
+    const t = e.touches[0]
+    swipeStart.current.x = t.clientX
+    swipeStart.current.y = t.clientY
+    swipeStart.current.t = e.timeStamp
+  }
+  const handleTouchEnd = (e) => {
+    const t = e.changedTouches[0]
+    const dx = t.clientX - swipeStart.current.x
+    const dy = t.clientY - swipeStart.current.y
+    const dt = e.timeStamp - swipeStart.current.t
+    if (dt > 600) return
+    if (Math.abs(dx) < 80) return
+    if (Math.abs(dy) > Math.abs(dx) * 0.6) return // 縦が強いとスクロール扱い
+    const idx = tabKeys.indexOf(activeTab)
+    if (idx < 0) return
+    const next = dx < 0 ? idx + 1 : idx - 1
+    if (next < 0 || next >= tabKeys.length) return
+    handleTabChange(tabKeys[next])
+  }
+
   const loadBackups = async () => {
     setBackupsLoading(true)
     setError('')
@@ -1484,7 +1549,11 @@ export default function GenroinConsole() {
           )}
         </aside>
 
-        <main className="main">
+        <main
+          className="main"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
         <div style={styles.header}>
           <div>
             <h1 style={styles.title}>{T('元 老 院', '元老院')}</h1>
@@ -1501,7 +1570,50 @@ export default function GenroinConsole() {
           </button>
         </div>
 
-        <div style={styles.tabBar}>
+        {installEvent && !installDismissed && (
+          <div
+            className="pwa-banner"
+            style={{
+              background: genroinMode ? 'rgba(212,160,23,0.12)' : '#fef9e7',
+              border: '1px solid ' + (genroinMode ? '#d4a017' : '#fbbf24'),
+              color: genroinMode ? '#fbbf24' : '#7c5800',
+            }}
+          >
+            <span style={{ flex: 1 }}>
+              📱 アプリとしてインストールできます
+            </span>
+            <button
+              type="button"
+              onClick={handleInstall}
+              style={{
+                background: genroinMode ? '#d4a017' : '#111',
+                color: genroinMode ? '#0a0a0a' : '#fff',
+                border: 'none',
+              }}
+            >
+              インストール
+            </button>
+            <button
+              type="button"
+              onClick={dismissInstall}
+              style={{
+                background: 'transparent',
+                color: 'inherit',
+                border: '1px solid currentColor',
+              }}
+            >
+              ×
+            </button>
+          </div>
+        )}
+
+        <div
+          className="sticky-tab"
+          style={{
+            ...styles.tabBar,
+            background: genroinMode ? 'rgba(10,10,10,0.7)' : 'rgba(246,247,249,0.85)',
+          }}
+        >
           {[
             { key: 'judge', label: T('即決（AI判断）', 'AI判断') },
             { key: 'smoking', label: T('上奏（喫煙所）', '喫煙所') },
