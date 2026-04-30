@@ -1074,6 +1074,7 @@ export default function GenroinConsole() {
   const [genroinLoading, setGenroinLoading] = useState(false)
   const [genroinMemoEdits, setGenroinMemoEdits] = useState({}) // {id: memo}
   const [genroinBusyId, setGenroinBusyId] = useState(null) // id currently being updated
+  const [aiReviewBusyId, setAiReviewBusyId] = useState(null) // id currently being AI-reviewed
 
   // 勅命（案件）
   const [taskList, setTaskList] = useState([])
@@ -1209,6 +1210,25 @@ export default function GenroinConsole() {
       setError(e?.message || 'メモ保存失敗')
     } finally {
       setGenroinBusyId(null)
+    }
+  }
+
+  const handleAiReview = async (id) => {
+    if (aiReviewBusyId) return
+    setAiReviewBusyId(id)
+    setError('')
+    try {
+      const r = await callGAS('aiReview', { genroinId: id })
+      setGenroinList((list) =>
+        list.map((g) =>
+          g['元老院ID'] === id ? { ...g, 'AI審議コメント': r.review } : g,
+        ),
+      )
+      showToast(T('御審議: 完了', 'AI審議: 完了'))
+    } catch (e) {
+      setError(e?.message || 'AI審議失敗')
+    } finally {
+      setAiReviewBusyId(null)
     }
   }
 
@@ -2465,6 +2485,97 @@ export default function GenroinConsole() {
                     >
                       {g['要約']}
                     </div>
+
+                    {(() => {
+                      const review = g['AI審議コメント']
+                      const reviewBusy = aiReviewBusyId === id
+                      const boxStyle = {
+                        marginBottom: 10,
+                        padding: 10,
+                        borderRadius: 6,
+                        background: genroinMode
+                          ? 'rgba(0,0,0,0.4)'
+                          : '#fafafa',
+                        border:
+                          '1px solid ' +
+                          (genroinMode ? 'rgba(251,191,36,0.45)' : '#e5e7eb'),
+                        fontSize: 12,
+                        color: genroinMode ? '#fef3c7' : '#374151',
+                      }
+                      if (review) {
+                        return (
+                          <div style={boxStyle}>
+                            <pre
+                              style={{
+                                margin: 0,
+                                whiteSpace: 'pre-wrap',
+                                fontFamily: 'inherit',
+                                fontSize: 12,
+                                lineHeight: 1.6,
+                              }}
+                            >
+                              {review}
+                            </pre>
+                            <div style={{ ...styles.rowActions, marginTop: 6 }}>
+                              <button
+                                type="button"
+                                style={styles.secondaryBtn(reviewBusy)}
+                                disabled={reviewBusy}
+                                onClick={() => handleAiReview(id)}
+                              >
+                                {reviewBusy ? (
+                                  <span
+                                    style={{
+                                      display: 'inline-flex',
+                                      flexDirection: 'column',
+                                      alignItems: 'center',
+                                    }}
+                                  >
+                                    <span style={styles.deliberating}>
+                                      {T('御再審議中…', '審議中…')}
+                                    </span>
+                                    <span style={styles.loadingLineWrap}>
+                                      <span style={styles.loadingLine} />
+                                    </span>
+                                  </span>
+                                ) : (
+                                  T('再御審議', '再審議')
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      }
+                      return (
+                        <div style={{ marginBottom: 10 }}>
+                          <button
+                            type="button"
+                            style={styles.secondaryBtn(reviewBusy)}
+                            disabled={reviewBusy}
+                            onClick={() => handleAiReview(id)}
+                          >
+                            {reviewBusy ? (
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                }}
+                              >
+                                <span style={styles.deliberating}>
+                                  {T('御審議中…', '審議中…')}
+                                </span>
+                                <span style={styles.loadingLineWrap}>
+                                  <span style={styles.loadingLine} />
+                                </span>
+                              </span>
+                            ) : (
+                              '🤖 ' + T('御審議', 'AI審議')
+                            )}
+                          </button>
+                        </div>
+                      )
+                    })()}
 
                     <div style={styles.flagRow}>
                       <label style={styles.flagLabel}>
