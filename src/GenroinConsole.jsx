@@ -771,6 +771,8 @@ button { min-height: 32px; }
 .ai-box { border: 1px solid #fbbf24; padding: 12px; font-size: 13px; line-height: 1.6; background: rgba(0,0,0,0.6); box-shadow: 0 0 10px rgba(251,191,36,0.2); border-radius: 6px; color: #fef3c7; }
 
 @keyframes genroinScan { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+@keyframes genroinHighlight { 0%,100% { box-shadow: 0 0 0 rgba(251,191,36,0); } 50% { box-shadow: 0 0 16px rgba(251,191,36,0.7); } }
+.highlight-target { outline: 2px solid #fbbf24; outline-offset: 3px; border-radius: 6px; animation: genroinHighlight 1.2s ease 0s 3; }
 @media (max-width: 1100px) { .side { display: none; } .layout { padding: 0 12px; max-width: 100%; } .main { min-width: 0; } }
 @media (max-width: 700px) { .layout { padding: 0 8px; gap: 0; } .main { gap: 12px; } }
 `
@@ -1004,7 +1006,7 @@ export default function GenroinConsole() {
   const [toast, setToast] = useState('')
 
   // ==== Phase 2: 喫煙所 / 元老院 / 案件 ====
-  const [activeTab, setActiveTab] = useState('judge') // 'judge' | 'smoking' | 'genroin' | 'task'
+  const [activeTab, setActiveTab] = useState(initialTab || 'judge') // 'judge' | 'smoking' | 'genroin' | 'task'
   const [smokingForm, setSmokingForm] = useState({ content: '', tags: '', author: '' })
   const [smokingList, setSmokingList] = useState([])
   const [smokingListLoading, setSmokingListLoading] = useState(false)
@@ -1015,6 +1017,17 @@ export default function GenroinConsole() {
   const [genroinMode, setGenroinMode] = useState(false)
   const T = (regal, normal) => (genroinMode ? regal : normal)
   const styles = buildStyles(genroinMode)
+
+  // Deep Link：mount 時に URL から初期化
+  const initialTab = (() => {
+    if (typeof window === 'undefined') return 'judge'
+    const t = new URLSearchParams(window.location.search).get('tab')
+    return ['judge', 'smoking', 'genroin', 'task'].indexOf(t) >= 0 ? t : null
+  })()
+  const initialId = (() => {
+    if (typeof window === 'undefined') return null
+    return new URLSearchParams(window.location.search).get('id')
+  })()
 
   // 議事（元老院）
   const [genroinList, setGenroinList] = useState([])
@@ -1060,6 +1073,9 @@ export default function GenroinConsole() {
   })
   // 期限超過判定の基準日（render 中の Date.now() 純度警告回避：初回 mount 時に確定）
   const [todayIso] = useState(() => new Date().toISOString().slice(0, 10))
+
+  // Deep Link：URLからの id 参照（mount時に初期化）
+  const [targetId, setTargetId] = useState(initialId)
 
 
   const handleInputChange = (e) => {
@@ -1445,6 +1461,47 @@ export default function GenroinConsole() {
     window.addEventListener('beforeinstallprompt', handler)
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])
+
+  // Deep Link：mount 時に initialTab に応じてリストロードをキック（setState せず）
+  useEffect(() => {
+    if (initialTab === 'smoking') loadSmokingList()
+    else if (initialTab === 'genroin') loadGenroinList()
+    else if (initialTab === 'task') loadTaskList()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // 対象アイテムが描画されたら scroll + ハイライト
+  useEffect(() => {
+    if (!targetId) return
+    const t = window.setTimeout(() => {
+      const el = document.getElementById('item-' + targetId)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    }, 200)
+    const t2 = window.setTimeout(() => setTargetId(null), 4000)
+    return () => {
+      window.clearTimeout(t)
+      window.clearTimeout(t2)
+    }
+  }, [targetId, genroinList, taskList, smokingList])
+
+  const handleCopyLink = async (tab, id) => {
+    const url =
+      window.location.origin +
+      window.location.pathname +
+      '?tab=' +
+      tab +
+      '&id=' +
+      encodeURIComponent(id)
+    try {
+      await navigator.clipboard.writeText(url)
+      showToast('🔗 リンクコピー: ' + id)
+    } catch {
+      // フォールバック
+      window.prompt('コピーしてください', url)
+    }
+  }
 
   const handleInstall = async () => {
     if (!installEvent) return
@@ -2156,27 +2213,58 @@ export default function GenroinConsole() {
                     : T('未処理なし', '未処理はありません')}
                 </div>
               ) : (
-                smokingList.map((s, i) => (
-                  <div key={s['喫煙所ID'] || i} style={styles.smokingItem}>
-                    <div>
-                      <span style={styles.badge}>{s['喫煙所ID']}</span>
-                      <span style={styles.meta}>{formatTimestamp(s['日時'])}</span>
-                      {s['投稿者'] && (
-                        <span style={{ ...styles.meta, marginLeft: 8 }}>
-                          by {s['投稿者']}
-                        </span>
-                      )}
-                      {s['タグ'] && (
-                        <span style={{ ...styles.meta, marginLeft: 8 }}>
-                          #{s['タグ']}
-                        </span>
-                      )}
+                smokingList.map((s, i) => {
+                  const sid = s['喫煙所ID']
+                  return (
+                    <div
+                      key={sid || i}
+                      id={'item-' + sid}
+                      className={targetId === sid ? 'highlight-target' : ''}
+                      style={styles.smokingItem}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          gap: 4,
+                        }}
+                      >
+                        <span style={styles.badge}>{sid}</span>
+                        <span style={styles.meta}>{formatTimestamp(s['日時'])}</span>
+                        {s['投稿者'] && (
+                          <span style={{ ...styles.meta, marginLeft: 4 }}>
+                            by {s['投稿者']}
+                          </span>
+                        )}
+                        {s['タグ'] && (
+                          <span style={{ ...styles.meta, marginLeft: 4 }}>
+                            #{s['タグ']}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleCopyLink('smoking', sid)}
+                          title="リンクコピー"
+                          style={{
+                            marginLeft: 'auto',
+                            background: 'transparent',
+                            border: 'none',
+                            color: genroinMode ? '#d4a017' : '#6b7280',
+                            cursor: 'pointer',
+                            fontSize: 14,
+                            padding: '2px 6px',
+                          }}
+                        >
+                          🔗
+                        </button>
+                      </div>
+                      <div style={{ color: genroinMode ? '#e8e8e8' : '#1a1a1a', marginTop: 2 }}>
+                        {s['内容']}
+                      </div>
                     </div>
-                    <div style={{ color: genroinMode ? '#e8e8e8' : '#1a1a1a', marginTop: 2 }}>
-                      {s['内容']}
-                    </div>
-                  </div>
-                ))
+                  )
+                })
               )}
             </div>
           </>
@@ -2225,17 +2313,27 @@ export default function GenroinConsole() {
                 return (
                   <div
                     key={id || i}
+                    id={'item-' + id}
+                    className={targetId === id ? 'highlight-target' : ''}
                     style={{
                       borderTop: '1px solid ' + (genroinMode ? '#2a2418' : '#f0f0f0'),
                       padding: '14px 4px',
                     }}
                   >
-                    <div style={{ marginBottom: 6 }}>
+                    <div
+                      style={{
+                        marginBottom: 6,
+                        display: 'flex',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: 4,
+                      }}
+                    >
                       <span style={styles.badge}>{id}</span>
                       <strong style={{ color: genroinMode ? '#e8e8e8' : '#1a1a1a' }}>
                         {g['タイトル']}
                       </strong>
-                      <span style={{ ...styles.badge, marginLeft: 8 }}>
+                      <span style={{ ...styles.badge, marginLeft: 4 }}>
                         {g['カテゴリ']}
                       </span>
                       <span style={priorityBadgeStyle(g['優先度'], genroinMode)}>
@@ -2246,6 +2344,22 @@ export default function GenroinConsole() {
                           {adoption === 'Yes' ? '採用' : '不採用'}
                         </span>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => handleCopyLink('genroin', id)}
+                        title="リンクコピー"
+                        style={{
+                          marginLeft: 'auto',
+                          background: 'transparent',
+                          border: 'none',
+                          color: genroinMode ? '#d4a017' : '#6b7280',
+                          cursor: 'pointer',
+                          fontSize: 14,
+                          padding: '2px 6px',
+                        }}
+                      >
+                        🔗
+                      </button>
                     </div>
                     <div
                       style={{
@@ -2362,19 +2476,29 @@ export default function GenroinConsole() {
                 return (
                   <div
                     key={id || i}
+                    id={'item-' + id}
+                    className={targetId === id ? 'highlight-target' : ''}
                     style={{
                       borderTop: '1px solid ' + (genroinMode ? '#2a2418' : '#f0f0f0'),
                       padding: '14px 4px',
                     }}
                   >
-                    <div style={{ marginBottom: 4 }}>
+                    <div
+                      style={{
+                        marginBottom: 4,
+                        display: 'flex',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: 4,
+                      }}
+                    >
                       <span style={styles.badge}>{id}</span>
                       <strong style={{ color: genroinMode ? '#e8e8e8' : '#1a1a1a' }}>
                         {t['タイトル']}
                       </strong>
                       <span style={statusBadgeStyle(status, genroinMode)}>{status}</span>
                       {t['カテゴリ'] && (
-                        <span style={{ ...styles.badge, marginLeft: 8 }}>
+                        <span style={{ ...styles.badge, marginLeft: 4 }}>
                           {t['カテゴリ']}
                         </span>
                       )}
@@ -2383,6 +2507,22 @@ export default function GenroinConsole() {
                           優{t['優先度']}
                         </span>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => handleCopyLink('task', id)}
+                        title="リンクコピー"
+                        style={{
+                          marginLeft: 'auto',
+                          background: 'transparent',
+                          border: 'none',
+                          color: genroinMode ? '#d4a017' : '#6b7280',
+                          cursor: 'pointer',
+                          fontSize: 14,
+                          padding: '2px 6px',
+                        }}
+                      >
+                        🔗
+                      </button>
                     </div>
                     <div style={{ color: genroinMode ? '#9ca3af' : '#666', fontSize: 12 }}>
                       {t['担当者'] && '担当: ' + t['担当者']}
