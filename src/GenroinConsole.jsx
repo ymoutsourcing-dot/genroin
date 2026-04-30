@@ -1072,6 +1072,7 @@ export default function GenroinConsole() {
   // 議事（元老院）
   const [genroinList, setGenroinList] = useState([])
   const [genroinLoading, setGenroinLoading] = useState(false)
+  const [genroinFilter, setGenroinFilter] = useState('open') // open | adopted | rejected | all
   const [genroinMemoEdits, setGenroinMemoEdits] = useState({}) // {id: memo}
   const [genroinBusyId, setGenroinBusyId] = useState(null) // id currently being updated
   const [aiReviewBusyId, setAiReviewBusyId] = useState(null) // id currently being AI-reviewed
@@ -1171,7 +1172,8 @@ export default function GenroinConsole() {
     setGenroinLoading(true)
     setError('')
     try {
-      const r = await callGAS('list', { sheet: '元老院' })
+      // 全件保持（フィルタはクライアント側で derived）
+      const r = await callGAS('list', { sheet: '元老院', filter: 'all' })
       setGenroinList(Array.isArray(r.items) ? r.items : [])
       setGenroinMemoEdits({})
       clearNotifDismiss('priority-a')
@@ -2399,18 +2401,47 @@ export default function GenroinConsole() {
           </>
         )}
 
-        {activeTab === 'genroin' && (
+        {activeTab === 'genroin' && (() => {
+          const counts = {
+            open: genroinList.filter((g) => !g['採用可否']).length,
+            adopted: genroinList.filter((g) => g['採用可否'] === 'Yes').length,
+            rejected: genroinList.filter((g) => g['採用可否'] === 'No').length,
+            all: genroinList.length,
+          }
+          const displayed =
+            genroinFilter === 'open'
+              ? genroinList.filter((g) => !g['採用可否'])
+              : genroinFilter === 'adopted'
+                ? genroinList.filter((g) => g['採用可否'] === 'Yes')
+                : genroinFilter === 'rejected'
+                  ? genroinList.filter((g) => g['採用可否'] === 'No')
+                  : genroinList
+          const filterTabs = [
+            { key: 'open', label: T('未決', '未決'), count: counts.open },
+            { key: 'adopted', label: T('採用', '採用'), count: counts.adopted },
+            { key: 'rejected', label: T('否決', '否決'), count: counts.rejected },
+            { key: 'all', label: T('全て', '全て'), count: counts.all },
+          ]
+          const emptyMsg =
+            genroinFilter === 'open'
+              ? T('未決の議題なし', '未決の議題はありません')
+              : genroinFilter === 'adopted'
+                ? T('採用議題なし', '採用済みの議題はありません')
+                : genroinFilter === 'rejected'
+                  ? T('否決議題なし', '否決の議題はありません')
+                  : T('議題なし', '元老院エントリなし')
+          return (
           <div style={styles.card}>
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                marginBottom: 6,
+                marginBottom: 8,
               }}
             >
               <div style={styles.label}>
-                {T('議事一覧', '元老院一覧')}（{genroinList.length}）
+                {T('議事', '元老院')}
               </div>
               <button
                 type="button"
@@ -2423,14 +2454,64 @@ export default function GenroinConsole() {
                   : T('再閲覧', '再読込')}
               </button>
             </div>
-            {genroinList.length === 0 ? (
+            <div
+              style={{
+                display: 'flex',
+                gap: 6,
+                flexWrap: 'wrap',
+                marginBottom: 12,
+              }}
+            >
+              {filterTabs.map((ft) => {
+                const active = genroinFilter === ft.key
+                return (
+                  <button
+                    key={ft.key}
+                    type="button"
+                    onClick={() => setGenroinFilter(ft.key)}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: 999,
+                      border:
+                        '1px solid ' +
+                        (active
+                          ? genroinMode
+                            ? '#fbbf24'
+                            : '#111'
+                          : genroinMode
+                            ? '#3a2f15'
+                            : '#d1d5db'),
+                      background: active
+                        ? genroinMode
+                          ? 'linear-gradient(180deg, #fbbf24 0%, #d4a017 100%)'
+                          : '#111'
+                        : genroinMode
+                          ? '#0d0d0d'
+                          : '#fff',
+                      color: active
+                        ? genroinMode
+                          ? '#0a0a0a'
+                          : '#fff'
+                        : genroinMode
+                          ? '#9ca3af'
+                          : '#374151',
+                      fontSize: 12,
+                      fontWeight: active ? 700 : 500,
+                      cursor: 'pointer',
+                      letterSpacing: 0.3,
+                    }}
+                  >
+                    {ft.label}（{ft.count}）
+                  </button>
+                )
+              })}
+            </div>
+            {displayed.length === 0 ? (
               <div style={styles.emptyHistory}>
-                {genroinLoading
-                  ? T('閲覧中…', '読込中…')
-                  : T('議題なし', '元老院エントリなし')}
+                {genroinLoading ? T('閲覧中…', '読込中…') : emptyMsg}
               </div>
             ) : (
-              genroinList.map((g, i) => {
+              displayed.map((g, i) => {
                 const id = g['元老院ID']
                 const adoption = g['採用可否'] || ''
                 const memo = genroinMemoEdits[id] !== undefined
@@ -2682,7 +2763,8 @@ export default function GenroinConsole() {
               })
             )}
           </div>
-        )}
+          )
+        })()}
 
         {activeTab === 'task' && (
           <div style={styles.card}>
