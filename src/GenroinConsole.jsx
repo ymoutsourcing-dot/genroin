@@ -1084,6 +1084,10 @@ export default function GenroinConsole() {
   const [logOpenId, setLogOpenId] = useState(null) // taskId whose log form is open
   const [logForm, setLogForm] = useState({ result: '', success: '', learning: '' })
   const [logBusy, setLogBusy] = useState(false)
+  // 指示書編集
+  const [editingInstructionId, setEditingInstructionId] = useState(null)
+  const [instructionDraft, setInstructionDraft] = useState('')
+  const [instructionBusy, setInstructionBusy] = useState(false)
 
   // AI進言（GPT）
   const [aiSuggestion, setAiSuggestion] = useState(null)
@@ -1319,6 +1323,48 @@ export default function GenroinConsole() {
       setError(e?.message || '勅命一覧取得失敗')
     } finally {
       setTaskLoading(false)
+    }
+  }
+
+  // 指示書 編集モード操作
+  const startEditInstruction = (task) => {
+    setEditingInstructionId(task['案件ID'])
+    setInstructionDraft(String(task['指示書'] || ''))
+  }
+  const cancelEditInstruction = () => {
+    setEditingInstructionId(null)
+    setInstructionDraft('')
+  }
+  const saveInstruction = async (taskId) => {
+    if (instructionBusy) return
+    setInstructionBusy(true)
+    setError('')
+    try {
+      await callGAS('updateTask', {
+        id: taskId,
+        instruction: instructionDraft,
+      })
+      // 楽観更新（reload不要）
+      setTaskList((list) =>
+        list.map((t) =>
+          t['案件ID'] === taskId ? { ...t, '指示書': instructionDraft } : t,
+        ),
+      )
+      setEditingInstructionId(null)
+      setInstructionDraft('')
+      showToast(T('御指示書: 保存', '指示書: 保存'))
+    } catch (e) {
+      setError(e?.message || '指示書保存失敗')
+    } finally {
+      setInstructionBusy(false)
+    }
+  }
+  const copyInstruction = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text || '')
+      showToast(T('御指示書: 写し取り', '指示書: コピー'))
+    } catch {
+      window.prompt('コピーしてください', text || '')
     }
   }
 
@@ -2903,44 +2949,112 @@ export default function GenroinConsole() {
                         <span style={{ marginLeft: 12 }}>← {t['元老院ID']}</span>
                       )}
                     </div>
-                    {t['指示書'] && (
-                      <details
-                        style={{
-                          marginTop: 6,
-                          fontSize: 12,
-                          padding: '6px 10px',
-                          borderRadius: 6,
-                          background: genroinMode
+                    {(() => {
+                      const isEditing = editingInstructionId === id
+                      const original = String(t['指示書'] || '')
+                      const changed = isEditing && instructionDraft !== original
+                      const boxStyle = {
+                        marginTop: 8,
+                        padding: 10,
+                        borderRadius: 6,
+                        background: isEditing
+                          ? genroinMode
+                            ? 'rgba(251,191,36,0.10)'
+                            : '#fffbeb'
+                          : genroinMode
                             ? 'rgba(0,0,0,0.4)'
                             : '#fafafa',
-                          border:
-                            '1px solid ' +
-                            (genroinMode ? 'rgba(251,191,36,0.3)' : '#e5e7eb'),
-                        }}
-                      >
-                        <summary
-                          style={{
-                            cursor: 'pointer',
-                            color: genroinMode ? '#d4a017' : '#374151',
-                            fontWeight: 600,
-                          }}
-                        >
-                          📋 {T('指示書', '指示書')}
-                        </summary>
-                        <pre
-                          style={{
-                            margin: '6px 0 0',
-                            whiteSpace: 'pre-wrap',
-                            fontFamily: 'inherit',
-                            fontSize: 12,
-                            lineHeight: 1.6,
-                            color: genroinMode ? '#fef3c7' : '#374151',
-                          }}
-                        >
-                          {t['指示書']}
-                        </pre>
-                      </details>
-                    )}
+                        border:
+                          '1px solid ' +
+                          (isEditing
+                            ? genroinMode
+                              ? '#fbbf24'
+                              : '#fcd34d'
+                            : genroinMode
+                              ? 'rgba(251,191,36,0.3)'
+                              : '#e5e7eb'),
+                      }
+                      const labelStyle = {
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: genroinMode ? '#d4a017' : '#374151',
+                        marginBottom: 6,
+                        letterSpacing: 0.5,
+                      }
+                      const preStyle = {
+                        margin: 0,
+                        whiteSpace: 'pre-wrap',
+                        fontFamily: 'inherit',
+                        fontSize: 12,
+                        lineHeight: 1.6,
+                        color: genroinMode ? '#fef3c7' : '#374151',
+                      }
+                      if (isEditing) {
+                        return (
+                          <div style={boxStyle}>
+                            <div style={labelStyle}>
+                              📋 {T('御指示書（編集中）', '指示書（編集中）')}
+                            </div>
+                            <textarea
+                              style={{
+                                ...styles.textarea,
+                                minHeight: 120,
+                                fontSize: 12,
+                              }}
+                              value={instructionDraft}
+                              onChange={(e) => setInstructionDraft(e.target.value)}
+                            />
+                            <div style={{ ...styles.rowActions, marginTop: 8 }}>
+                              <button
+                                type="button"
+                                style={styles.primaryBtn(!changed || instructionBusy)}
+                                disabled={!changed || instructionBusy}
+                                onClick={() => saveInstruction(id)}
+                              >
+                                {instructionBusy
+                                  ? T('御保存中…', '保存中…')
+                                  : T('御保存', '保存')}
+                              </button>
+                              <button
+                                type="button"
+                                style={styles.secondaryBtn(instructionBusy)}
+                                disabled={instructionBusy}
+                                onClick={cancelEditInstruction}
+                              >
+                                {T('御中止', 'キャンセル')}
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      }
+                      return (
+                        <div style={boxStyle}>
+                          <div style={labelStyle}>
+                            📋 {T('御指示書', '指示書')}
+                          </div>
+                          <pre style={preStyle}>
+                            {original || T('（未生成）', '（未生成）')}
+                          </pre>
+                          <div style={{ ...styles.rowActions, marginTop: 8 }}>
+                            <button
+                              type="button"
+                              style={styles.secondaryBtn(false)}
+                              onClick={() => startEditInstruction(t)}
+                            >
+                              {T('御編集', '編集')}
+                            </button>
+                            <button
+                              type="button"
+                              style={styles.secondaryBtn(!original)}
+                              disabled={!original}
+                              onClick={() => copyInstruction(original)}
+                            >
+                              {T('御写し', 'コピー')}
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })()}
                     <div style={styles.rowActions}>
                       <button
                         type="button"
