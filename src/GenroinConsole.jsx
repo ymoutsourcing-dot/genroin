@@ -1351,18 +1351,28 @@ export default function GenroinConsole() {
   }
 
   // 議題から指示書テンプレを生成（勅命に下す時に使用）
+  // AI審議の【採用理由】と【推奨アクション】を抽出 → 無ければ summary / title fallback
   const buildInstructions = (g) => {
     const summary = String(g['要約'] || '')
-    // AI審議の「採用理由：」があればそれを「目的」に流用、無ければ要約 fallback
     const review = String(g['AI審議コメント'] || '')
+    const title = String(g['タイトル'] || '')
+
     const reasonMatch = review.match(/■\s*採用理由：\s*\n?([\s\S]*?)(?=\n*■|$)/)
-    const reason = reasonMatch ? reasonMatch[1].trim() : summary
+    const actionsMatch = review.match(/■\s*推奨アクション：\s*\n?([\s\S]*?)(?=\n*■|$)/)
+
+    const reason = reasonMatch
+      ? reasonMatch[1].trim()
+      : summary.trim()
+        ? summary.trim()
+        : title
+
+    const actions = actionsMatch
+      ? actionsMatch[1].trim()
+      : '1. 推奨アクションを確認する\n2. 必要な作業を実行する\n3. 結果を確認する'
+
     return (
       '【目的】\n' + reason + '\n\n' +
-      '【手順】\n' +
-      '1. 推奨アクションを確認する\n' +
-      '2. 必要な作業を実行する\n' +
-      '3. 結果を確認する\n\n' +
+      '【手順】\n' + actions + '\n\n' +
       '【完了条件】\n' +
       '・目的が達成されている\n' +
       '・作業結果が確認できる\n' +
@@ -2090,8 +2100,9 @@ export default function GenroinConsole() {
       if (item['採用可否'] !== 'Yes') {
         await callGAS('updateGenroin', { genroinId: id, adoption: 'Yes' })
       }
-      // 勅命作成
-      const r = await callGAS('createTask', { genroinId: id })
+      // 勅命作成（指示書も自動生成して同梱）
+      const instructions = buildInstructions(item)
+      const r = await callGAS('createTask', { genroinId: id, instructions })
       showToast('勅命下達: ' + r.taskId)
       setAiSuggestion(null)
       await loadGenroinList()
