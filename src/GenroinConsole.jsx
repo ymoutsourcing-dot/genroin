@@ -503,7 +503,142 @@ function LeftPanelNormal({ stats }) {
   )
 }
 
-function RightPanelNormal({ history, backupProps }) {
+function AgentStatusBadge({ status, regal, onClick }) {
+  const { color, label, ageStr } = status
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={'クリックで即更新（自動 10 秒）'}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '4px 10px',
+        marginRight: 8,
+        borderRadius: 12,
+        border: '1px solid ' + color,
+        background: regal ? 'rgba(0,0,0,0.35)' : '#ffffff',
+        fontSize: 11,
+        fontWeight: 700,
+        color: color,
+        cursor: 'pointer',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      <span
+        style={{
+          width: 8,
+          height: 8,
+          borderRadius: '50%',
+          background: color,
+          boxShadow: '0 0 6px ' + color,
+        }}
+      />
+      agent {label}
+      {ageStr && <span style={{ opacity: 0.7, fontSize: 10, fontWeight: 500 }}>({ageStr})</span>}
+    </button>
+  )
+}
+
+function ExecPanel({ regal, presets, busy, onRun, history, loading, onRefresh }) {
+  const T = (r, n) => (regal ? r : n)
+  return (
+    <>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginTop: 20,
+          marginBottom: 8,
+        }}
+      >
+        <h3 style={{ margin: 0 }}>{T('🏛 執行盤', '⚡ 実行')}</h3>
+        <button
+          type="button"
+          onClick={onRefresh}
+          disabled={loading}
+          style={{
+            fontSize: 11,
+            padding: '2px 8px',
+            borderRadius: 4,
+            cursor: loading ? 'not-allowed' : 'pointer',
+            background: 'transparent',
+            border: '1px solid currentColor',
+            color: 'inherit',
+            opacity: loading ? 0.5 : 1,
+          }}
+        >
+          {loading ? '…' : T('改新', '更新')}
+        </button>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {Object.entries(presets).map(([key, p]) => {
+          const isBusy = !!busy[key]
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => onRun(key)}
+              disabled={isBusy}
+              style={{
+                padding: '6px 10px',
+                fontSize: 12,
+                borderRadius: 4,
+                border: regal ? '1px solid rgba(251,191,36,0.5)' : '1px solid #d1d5db',
+                background: regal ? 'rgba(251,191,36,0.08)' : '#f9fafb',
+                color: regal ? '#fbbf24' : '#374151',
+                cursor: isBusy ? 'not-allowed' : 'pointer',
+                textAlign: 'left',
+                fontWeight: 600,
+              }}
+            >
+              {isBusy ? '…' : (regal ? p.regal : p.label)}
+            </button>
+          )
+        })}
+      </div>
+      <h4 style={{ marginTop: 12, marginBottom: 6, fontSize: 12, opacity: 0.8 }}>
+        {T('近時の執行', '最近の実行')}
+      </h4>
+      <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+        {history.length === 0 ? (
+          <li style={{ opacity: 0.5, fontSize: 11 }}>{T('記録なし', '履歴なし')}</li>
+        ) : (
+          history.map((c, i) => {
+            const status = String(c['ステータス'] || '')
+            const id = String(c['コマンドID'] || '')
+            const type = String(c['type'] || '')
+            const icon = status === 'done' ? '✓' : status === 'error' ? '✗' : status === 'running' ? '⟳' : '⏱'
+            const color = status === 'done' ? '#22c55e' : status === 'error' ? '#ef4444' : status === 'queued' ? '#9ca3af' : '#fbbf24'
+            const shortId = id.replace(/^CMD-\d{8}-/, '')
+            return (
+              <li
+                key={id || i}
+                style={{
+                  fontSize: 11,
+                  padding: '3px 0',
+                  display: 'flex',
+                  gap: 6,
+                  alignItems: 'center',
+                  borderBottom: regal ? '1px dashed rgba(251,191,36,0.15)' : '1px dashed #e5e7eb',
+                }}
+                title={String(c['結果'] || '')}
+              >
+                <span style={{ color, width: 12, fontWeight: 700, textAlign: 'center' }}>{icon}</span>
+                <span style={{ opacity: 0.8, fontFamily: 'monospace' }}>{shortId}</span>
+                <span style={{ opacity: 0.7 }}>{type}</span>
+              </li>
+            )
+          })
+        )}
+      </ul>
+    </>
+  )
+}
+
+function RightPanelNormal({ history, backupProps, execProps }) {
   return (
     <div className="panel">
       <h3>クイックメモ</h3>
@@ -518,6 +653,7 @@ function RightPanelNormal({ history, backupProps }) {
           ))
         )}
       </ul>
+      <ExecPanel regal={false} {...execProps} />
       <BackupSection {...backupProps} />
     </div>
   )
@@ -535,7 +671,7 @@ function LeftPanelGenroin({ stats }) {
   )
 }
 
-function RightPanelGenroin({ recent, summary, suggestion, fallback, loading, error, onRefresh, backupProps, actionables, busyId, onOneClick }) {
+function RightPanelGenroin({ recent, summary, suggestion, fallback, loading, error, onRefresh, backupProps, actionables, busyId, onOneClick, execProps }) {
   return (
     <div className="panel genroin">
       <div
@@ -667,6 +803,7 @@ function RightPanelGenroin({ recent, summary, suggestion, fallback, loading, err
       </ul>
       <h3 style={{ marginTop: 20 }}>優先度</h3>
       <p style={{ fontSize: 12, opacity: 0.85, margin: 0 }}>{summary}</p>
+      <ExecPanel regal={true} {...execProps} />
       <BackupSection {...backupProps} />
     </div>
   )
@@ -910,6 +1047,14 @@ const GAS_URL =
   'https://script.google.com/macros/s/AKfycbzGMnq2PCB2zXkpz_-a2DNH0svR-TCLJnyTqCD2Bts-YYp2ur0PUv-IQEFFJgz-Brjy/exec'
 const GAS_SECRET = 'vXrkAMH0xcSbnnWwgo5sO4EFGZdLHVzdetYoXVcG'
 
+// 執行盤プリセット — type/payload を一元管理（フロント側でキー誤りを防ぐ）
+const COMMAND_PRESETS = {
+  chrome:   { type: 'openApp',  payload: { name: 'chrome' },     label: 'Chrome 起動',    regal: 'Chrome 召喚',  confirm: null },
+  vscode:   { type: 'openApp',  payload: { name: 'vscode' },     label: 'VSCode 起動',    regal: 'VSCode 召喚',  confirm: null },
+  explorer: { type: 'openApp',  payload: { name: 'explorer' },   label: 'Explorer 起動',  regal: 'Explorer 召喚', confirm: null },
+  build:    { type: 'buildApp', payload: { project: 'genroin' }, label: 'Genroin ビルド', regal: 'Genroin 鋳造', confirm: 'npm run build を実行します（30秒〜1分、dist 上書き）。よろしいですか？' },
+}
+
 async function callGAS(action, body) {
   const res = await fetch(GAS_URL, {
     method: 'POST',
@@ -1051,6 +1196,14 @@ export default function GenroinConsole() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
+
+  // 執行盤
+  const [commands, setCommands] = useState([])
+  const [commandsLoading, setCommandsLoading] = useState(false)
+  const [execBusy, setExecBusy] = useState({})
+
+  // agent 状態バッジ
+  const [agentStatus, setAgentStatus] = useState({ color: '#9ca3af', label: '?', ageStr: '...' })
 
   // ==== Phase 2: 喫煙所 / 元老院 / 案件 ====
   const [activeTab, setActiveTab] = useState(() => {
@@ -1476,6 +1629,59 @@ export default function GenroinConsole() {
     setTimeout(() => setToast((cur) => (cur === msg ? '' : cur)), 1500)
   }
 
+  // 執行盤：履歴ロード（直近5件）
+  const loadCommands = async () => {
+    setCommandsLoading(true)
+    try {
+      const r = await callGAS('list', { sheet: 'コマンド' })
+      setCommands((r.items || []).slice(0, 5))
+    } catch (_) {
+      // 履歴取得失敗は静かに無視
+    } finally {
+      setCommandsLoading(false)
+    }
+  }
+
+  // agent 状態：getHeartbeat 結果から色 / ラベル算出
+  const calcAgentStatus = (ageMs) => {
+    if (ageMs < 0) return { color: '#9ca3af', label: 'OFF', ageStr: '未起動' }
+    const sec = Math.floor(ageMs / 1000)
+    if (ageMs < 15000) return { color: '#22c55e', label: 'ON', ageStr: sec + 's前' }
+    if (ageMs < 120000) return { color: '#fbbf24', label: '怪', ageStr: sec + 's前' }
+    if (ageMs < 600000) return { color: '#ef4444', label: 'OFF', ageStr: Math.floor(sec / 60) + 'm前' }
+    return { color: '#ef4444', label: 'OFF', ageStr: 'ロスト' }
+  }
+
+  const loadAgentStatus = async () => {
+    try {
+      const r = await callGAS('getHeartbeat')
+      setAgentStatus(calcAgentStatus(r.ageMs))
+    } catch (_) {
+      setAgentStatus({ color: '#9ca3af', label: '?', ageStr: '通信失敗' })
+    }
+  }
+
+  // 執行盤：プリセット実行（enqueue → 2.5秒後に履歴 reload）
+  const runCommand = async (key) => {
+    const preset = COMMAND_PRESETS[key]
+    if (!preset) return
+    if (preset.confirm && !window.confirm(preset.confirm)) return
+    setExecBusy((s) => ({ ...s, [key]: true }))
+    try {
+      const r = await callGAS('enqueueCommand', {
+        type: preset.type,
+        payload: preset.payload,
+        sender: 'ui',
+      })
+      showToast(T('発令: ', '送信OK: ') + (r.commandId || ''))
+      setTimeout(loadCommands, 2500)
+    } catch (e) {
+      showToast(T('発令失敗: ', 'エラー: ') + (e.message || ''))
+    } finally {
+      setExecBusy((s) => ({ ...s, [key]: false }))
+    }
+  }
+
   const applyQuickAction = (id, type) => {
     if (!id) return
     if (type === 'important') {
@@ -1654,6 +1860,16 @@ export default function GenroinConsole() {
     if (activeTab === 'smoking') loadSmokingList()
     else if (activeTab === 'genroin') loadGenroinList()
     else if (activeTab === 'task') loadTaskList()
+    // 執行盤の履歴を初回ロード
+    loadCommands()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // agent 状態：10秒ごと polling
+  useEffect(() => {
+    loadAgentStatus()
+    const t = setInterval(loadAgentStatus, 10000)
+    return () => clearInterval(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -1903,13 +2119,20 @@ export default function GenroinConsole() {
               {T('御 前 会 議 — 裁可と記録の一元', 'AI司令塔 — 指示・記録・判断')}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setGenroinMode((v) => !v)}
-            style={styles.toggleBtn(genroinMode)}
-          >
-            元老院モード {genroinMode ? 'ON' : 'OFF'}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <AgentStatusBadge
+              status={agentStatus}
+              regal={genroinMode}
+              onClick={loadAgentStatus}
+            />
+            <button
+              type="button"
+              onClick={() => setGenroinMode((v) => !v)}
+              style={styles.toggleBtn(genroinMode)}
+            >
+              元老院モード {genroinMode ? 'ON' : 'OFF'}
+            </button>
+          </div>
         </div>
 
         {visibleNotifications.map((n) => {
@@ -3167,6 +3390,14 @@ export default function GenroinConsole() {
                 onCreate: createBackup,
                 onRestore: restoreBackup,
               }}
+              execProps={{
+                presets: COMMAND_PRESETS,
+                busy: execBusy,
+                onRun: runCommand,
+                history: commands,
+                loading: commandsLoading,
+                onRefresh: loadCommands,
+              }}
             />
           ) : (
             <RightPanelNormal
@@ -3179,6 +3410,14 @@ export default function GenroinConsole() {
                 onLoad: loadBackups,
                 onCreate: createBackup,
                 onRestore: restoreBackup,
+              }}
+              execProps={{
+                presets: COMMAND_PRESETS,
+                busy: execBusy,
+                onRun: runCommand,
+                history: commands,
+                loading: commandsLoading,
+                onRefresh: loadCommands,
               }}
             />
           )}

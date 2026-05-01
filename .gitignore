@@ -33,3 +33,10 @@ FFGoogleDrive*
 
 # 自動生成ドキュメント（再発防止）
 CLAUDE.md
+
+# PC Agent シークレット
+pc-agent/.env
+pc-agent/node_modules
+
+# clasp: コード本体は _gas_code.gs を正本とし、gas-src/コード.js は同期生成物
+gas-src/コード.js

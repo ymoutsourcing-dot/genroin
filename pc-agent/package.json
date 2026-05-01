@@ -1,0 +1,16 @@
+{
+  "name": "genroin-pc-agent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "元老院コンソールの PC Agent。GAS のコマンドキューを poll し、type ベースで実行・結果返却する。",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  }
+}

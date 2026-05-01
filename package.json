@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "gas:sync": "cp _gas_code.gs gas-src/コード.js",
+    "gas:push": "npm run gas:sync && clasp push -f",
+    "gas:deploy": "npm run gas:push && clasp deploy --deploymentId AKfycbzGMnq2PCB2zXkpz_-a2DNH0svR-TCLJnyTqCD2Bts-YYp2ur0PUv-IQEFFJgz-Brjy --description \"deploy via clasp\""
   },
   "dependencies": {
     "react": "^19.2.5",
