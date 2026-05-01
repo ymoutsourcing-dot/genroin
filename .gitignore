@@ -30,3 +30,6 @@ dist-ssr
 _*.gs
 _*.b64
 FFGoogleDrive*
+
+# 自動生成ドキュメント（再発防止）
+CLAUDE.md
