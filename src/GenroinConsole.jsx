@@ -503,6 +503,212 @@ function LeftPanelNormal({ stats }) {
   )
 }
 
+function RefineModal({
+  open, task, regal, phase, messages, input, busy, draft,
+  remaining, maxTurns, onInputChange, onSend, onGenerate, onApply, onBack, onClose,
+}) {
+  if (!open || !task) return null
+  const T = (r, n) => (regal ? r : n)
+  const overlayStyle = {
+    position: 'fixed', inset: 0, zIndex: 1000,
+    background: 'rgba(0,0,0,0.55)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    padding: 12,
+  }
+  const modalStyle = {
+    width: '100%', maxWidth: 720, maxHeight: '92vh',
+    display: 'flex', flexDirection: 'column',
+    background: regal ? '#0a0a0a' : '#ffffff',
+    border: '1px solid ' + (regal ? '#3a2f15' : '#d1d5db'),
+    borderRadius: 10,
+    color: regal ? '#fbbf24' : '#111827',
+    overflow: 'hidden',
+  }
+  const headerStyle = {
+    padding: '12px 16px',
+    borderBottom: '1px solid ' + (regal ? '#3a2f15' : '#e5e7eb'),
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+  }
+  const sectionStyle = {
+    padding: '12px 16px',
+    borderBottom: '1px solid ' + (regal ? '#3a2f15' : '#e5e7eb'),
+  }
+  const labelStyle = { fontSize: 11, opacity: 0.7, marginBottom: 6, fontWeight: 600 }
+  const previewBox = {
+    padding: 8, borderRadius: 4, fontSize: 11,
+    background: regal ? '#000' : '#f9fafb',
+    border: '1px solid ' + (regal ? '#1f1f1f' : '#e5e7eb'),
+    maxHeight: 120, overflow: 'auto', whiteSpace: 'pre-wrap',
+    fontFamily: 'monospace', opacity: 0.75,
+  }
+  const chatArea = {
+    flex: 1, padding: '12px 16px', overflow: 'auto', minHeight: 200,
+  }
+  const bubbleUser = {
+    alignSelf: 'flex-end', maxWidth: '80%',
+    padding: '8px 12px', borderRadius: 10, marginBottom: 8,
+    background: regal ? 'rgba(251,191,36,0.12)' : '#dbeafe',
+    color: regal ? '#fbbf24' : '#1e40af',
+    border: '1px solid ' + (regal ? 'rgba(251,191,36,0.3)' : '#93c5fd'),
+    whiteSpace: 'pre-wrap', fontSize: 12,
+  }
+  const bubbleAi = {
+    alignSelf: 'flex-start', maxWidth: '85%',
+    padding: '8px 12px', borderRadius: 10, marginBottom: 8,
+    background: regal ? 'rgba(255,255,255,0.05)' : '#f3f4f6',
+    color: regal ? '#e5e7eb' : '#374151',
+    border: '1px solid ' + (regal ? '#2a2a2a' : '#d1d5db'),
+    whiteSpace: 'pre-wrap', fontSize: 12,
+  }
+  const footerStyle = {
+    padding: '12px 16px',
+    borderTop: '1px solid ' + (regal ? '#3a2f15' : '#e5e7eb'),
+    display: 'flex', gap: 8, justifyContent: 'flex-end',
+  }
+  const btnPrimary = {
+    padding: '6px 14px', fontSize: 12, fontWeight: 700, borderRadius: 6,
+    border: '1px solid ' + (regal ? '#fbbf24' : '#10b981'),
+    background: regal
+      ? 'linear-gradient(180deg, #fbbf24 0%, #d4a017 100%)'
+      : 'linear-gradient(180deg, #10b981 0%, #059669 100%)',
+    color: regal ? '#0a0a0a' : '#ffffff', cursor: 'pointer',
+  }
+  const btnSecondary = {
+    padding: '6px 14px', fontSize: 12, fontWeight: 600, borderRadius: 6,
+    border: '1px solid ' + (regal ? 'rgba(251,191,36,0.5)' : '#d1d5db'),
+    background: 'transparent',
+    color: regal ? '#fbbf24' : '#374151', cursor: 'pointer',
+  }
+
+  return (
+    <div style={overlayStyle} onClick={onClose}>
+      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
+        {/* ヘッダー */}
+        <div style={headerStyle}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 14 }}>
+              {T('🤖 AIと煮詰める', '🤖 AIと煮詰める')}
+            </div>
+            <div style={{ fontSize: 11, opacity: 0.7 }}>
+              {task['案件ID']} {(task['タイトル'] || '').slice(0, 40)}
+            </div>
+          </div>
+          <button type="button" onClick={onClose} style={{
+            background: 'transparent', border: 'none', color: 'inherit',
+            fontSize: 18, cursor: 'pointer', padding: 4,
+          }}>✕</button>
+        </div>
+
+        {/* 現在の指示書プレビュー */}
+        <div style={sectionStyle}>
+          <div style={labelStyle}>{T('現在の指示書', '現在の指示書')}</div>
+          <div style={previewBox}>
+            {(task['指示書'] || '').trim() || T('（未設定）', '（未設定）')}
+          </div>
+        </div>
+
+        {/* phase: chat or preview */}
+        {phase === 'chat' ? (
+          <>
+            {/* ターン表示 */}
+            <div style={{ ...sectionStyle, padding: '6px 16px', fontSize: 11, opacity: 0.7 }}>
+              {T('対話 — あと ', '対話 — 残り ')}{remaining}/{maxTurns} {T('ターン', 'ターン')}
+            </div>
+
+            {/* 会話履歴 */}
+            <div style={chatArea}>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {messages.map((m, i) => (
+                  <div key={i} style={m.role === 'user' ? bubbleUser : bubbleAi}>{m.content}</div>
+                ))}
+                {busy && (
+                  <div style={{ ...bubbleAi, opacity: 0.6 }}>{T('考え中…', '考え中…')}</div>
+                )}
+              </div>
+            </div>
+
+            {/* 入力欄 */}
+            {remaining > 0 && (
+              <div style={{ ...sectionStyle, display: 'flex', gap: 8 }}>
+                <textarea
+                  value={input}
+                  onChange={(e) => onInputChange(e.target.value)}
+                  placeholder={T('御発言を入力…', '回答を入力...')}
+                  rows={2}
+                  disabled={busy}
+                  style={{
+                    flex: 1, padding: 8, fontSize: 12, borderRadius: 4,
+                    border: '1px solid ' + (regal ? '#3a2f15' : '#d1d5db'),
+                    background: regal ? '#000' : '#ffffff',
+                    color: regal ? '#e5e7eb' : '#111827',
+                    resize: 'vertical', fontFamily: 'inherit',
+                  }}
+                />
+                <button type="button" onClick={onSend} disabled={busy || !input.trim()} style={{
+                  ...btnPrimary,
+                  opacity: (busy || !input.trim()) ? 0.5 : 1,
+                  cursor: (busy || !input.trim()) ? 'not-allowed' : 'pointer',
+                }}>
+                  {T('送信', '送信')}
+                </button>
+              </div>
+            )}
+
+            {/* フッター */}
+            <div style={footerStyle}>
+              <button type="button" onClick={onClose} style={btnSecondary}>
+                {T('閉じる', '閉じる')}
+              </button>
+              <button
+                type="button"
+                onClick={onGenerate}
+                disabled={busy || messages.filter((m) => m.role === 'user').length < 1}
+                style={{
+                  ...btnPrimary,
+                  opacity: (busy || messages.filter((m) => m.role === 'user').length < 1) ? 0.5 : 1,
+                  cursor: (busy || messages.filter((m) => m.role === 'user').length < 1) ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {busy ? T('生成中…', '生成中…') : T('指示書ドラフト生成 →', 'ドラフト生成 →')}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* プレビュー */}
+            <div style={{ ...sectionStyle, flex: 1, overflow: 'auto' }}>
+              <div style={labelStyle}>
+                {T('▼ 生成プレビュー（反映前確認）', '▼ 生成プレビュー（反映前確認）')}
+              </div>
+              <div style={{
+                ...previewBox, opacity: 1, maxHeight: 'none',
+                fontSize: 12, padding: 12,
+                background: regal ? 'rgba(251,191,36,0.05)' : '#fffbeb',
+                border: '1px solid ' + (regal ? 'rgba(251,191,36,0.3)' : '#fcd34d'),
+              }}>
+                {draft || T('（生成失敗）', '（生成失敗）')}
+              </div>
+            </div>
+
+            {/* フッター（プレビュー時） */}
+            <div style={footerStyle}>
+              <button type="button" onClick={onBack} style={btnSecondary}>
+                {T('← 対話に戻る', '← 対話に戻る')}
+              </button>
+              <button type="button" onClick={onApply} disabled={busy || !draft} style={{
+                ...btnPrimary, opacity: (busy || !draft) ? 0.5 : 1,
+                cursor: (busy || !draft) ? 'not-allowed' : 'pointer',
+              }}>
+                {busy ? T('反映中…', '反映中…') : T('指示書に反映', '指示書に反映')}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function AgentStatusBadge({ status, regal, onClick }) {
   const { color, label, ageStr } = status
   return (
@@ -1214,6 +1420,16 @@ export default function GenroinConsole() {
   // agent 状態バッジ
   const [agentStatus, setAgentStatus] = useState({ color: '#9ca3af', label: '?', ageStr: '...' })
 
+  // AIと煮詰める モーダル
+  const [refineOpen, setRefineOpen] = useState(false)
+  const [refineTask, setRefineTask] = useState(null)
+  const [refineMessages, setRefineMessages] = useState([])
+  const [refineInput, setRefineInput] = useState('')
+  const [refineBusy, setRefineBusy] = useState(false)
+  const [refineDraft, setRefineDraft] = useState('')
+  const [refinePhase, setRefinePhase] = useState('chat') // 'chat' | 'preview'
+  const REFINE_MAX_TURNS = 5
+
   // ==== Phase 2: 喫煙所 / 元老院 / 案件 ====
   const [activeTab, setActiveTab] = useState(() => {
     if (typeof window === 'undefined') return 'judge'
@@ -1537,6 +1753,127 @@ export default function GenroinConsole() {
       showToast(T('御指示書: 写し取り', '指示書: コピー'))
     } catch {
       window.prompt('コピーしてください', text || '')
+    }
+  }
+
+  // === AIと煮詰める：モーダル制御 ===
+  const openRefine = (task) => {
+    setRefineTask(task)
+    setRefinePhase('chat')
+    setRefineDraft('')
+    setRefineInput('')
+    setRefineMessages([
+      {
+        role: 'assistant',
+        content:
+          'この案件「' + (task['タイトル'] || '') + '」を実行可能なレベルまで具体化します。\n\n' +
+          '以下を教えてください：\n' +
+          '1. 目的は何ですか？（何のためにやる？）\n' +
+          '2. 最終成果物は何ですか？（できあがりの形）\n' +
+          '3. 誰がやりますか？（実行担当）\n\n' +
+          'まとめて回答いただけると進めやすいです。',
+      },
+    ])
+    setRefineOpen(true)
+  }
+
+  const closeRefine = () => {
+    // dirty (1ターン以上対話済) なら確認
+    const userTurns = refineMessages.filter((m) => m.role === 'user').length
+    if (userTurns > 0 && refinePhase === 'chat') {
+      if (!window.confirm('対話内容は破棄されます。よろしいですか？')) return
+    }
+    setRefineOpen(false)
+    setRefineTask(null)
+    setRefineMessages([])
+    setRefineInput('')
+    setRefineDraft('')
+    setRefinePhase('chat')
+  }
+
+  const refineUserTurns = refineMessages.filter((m) => m.role === 'user').length
+  const refineRemaining = Math.max(0, REFINE_MAX_TURNS - refineUserTurns)
+
+  const sendRefineMessage = async () => {
+    if (refineBusy) return
+    const text = refineInput.trim()
+    if (!text) return
+    if (refineUserTurns >= REFINE_MAX_TURNS) return
+    setRefineBusy(true)
+    const newMsgs = [...refineMessages, { role: 'user', content: text }]
+    setRefineMessages(newMsgs)
+    setRefineInput('')
+    try {
+      const r = await callGAS('aiChat', {
+        taskTitle: refineTask['タイトル'] || '',
+        currentInstruction: refineTask['指示書'] || '',
+        history: newMsgs,
+        userInput: '', // history に含めたので追加 user 不要
+        finalize: false,
+      })
+      setRefineMessages([...newMsgs, { role: 'assistant', content: r.message || '...' }])
+    } catch (e) {
+      setRefineMessages([
+        ...newMsgs,
+        { role: 'assistant', content: '⚠ AI 応答失敗: ' + (e.message || '') + '\n再送してください。' },
+      ])
+    } finally {
+      setRefineBusy(false)
+    }
+  }
+
+  const generateRefineDraft = async () => {
+    if (refineBusy) return
+    if (refineUserTurns < 1) {
+      showToast(T('1往復以上対話してください', '最低 1 ターン必要'))
+      return
+    }
+    setRefineBusy(true)
+    try {
+      const r = await callGAS('aiChat', {
+        taskTitle: refineTask['タイトル'] || '',
+        currentInstruction: refineTask['指示書'] || '',
+        history: refineMessages,
+        userInput: '',
+        finalize: true,
+      })
+      setRefineDraft(r.message || '')
+      setRefinePhase('preview')
+    } catch (e) {
+      showToast(T('生成失敗: ', 'エラー: ') + (e.message || ''))
+    } finally {
+      setRefineBusy(false)
+    }
+  }
+
+  const applyRefineDraft = async () => {
+    if (refineBusy) return
+    const hasExisting = String(refineTask['指示書'] || '').trim().length > 0
+    if (hasExisting) {
+      if (!window.confirm('現在の指示書を上書きします。よろしいですか？')) return
+    }
+    setRefineBusy(true)
+    try {
+      await callGAS('updateTask', {
+        id: refineTask['案件ID'],
+        instruction: refineDraft,
+      })
+      setTaskList((list) =>
+        list.map((t) =>
+          t['案件ID'] === refineTask['案件ID'] ? { ...t, '指示書': refineDraft } : t,
+        ),
+      )
+      showToast(T('御指示書: 反映', '指示書: 反映完了'))
+      setRefineOpen(false)
+      setRefineTask(null)
+      setRefineMessages([])
+      setRefineInput('')
+      setRefineDraft('')
+      setRefinePhase('chat')
+    } catch (e) {
+      showToast(T('反映失敗: ', 'エラー: ') + (e.message || ''))
+    } finally {
+      setRefineBusy(false)
     }
   }
 
@@ -3372,6 +3709,13 @@ export default function GenroinConsole() {
                             >
                               {T('御写し', 'コピー')}
                             </button>
+                            <button
+                              type="button"
+                              style={styles.secondaryBtn(false)}
+                              onClick={() => openRefine(t)}
+                            >
+                              {T('🤖 御煮詰め', '🤖 AIと煮詰める')}
+                            </button>
                           </div>
                         </div>
                       )
@@ -3585,6 +3929,24 @@ export default function GenroinConsole() {
         </aside>
       </div>
       {toast && <div style={styles.toast}>{toast}</div>}
+      <RefineModal
+        open={refineOpen}
+        task={refineTask}
+        regal={genroinMode}
+        phase={refinePhase}
+        messages={refineMessages}
+        input={refineInput}
+        busy={refineBusy}
+        draft={refineDraft}
+        remaining={refineRemaining}
+        maxTurns={REFINE_MAX_TURNS}
+        onInputChange={setRefineInput}
+        onSend={sendRefineMessage}
+        onGenerate={generateRefineDraft}
+        onApply={applyRefineDraft}
+        onBack={() => setRefinePhase('chat')}
+        onClose={closeRefine}
+      />
     </div>
   )
 }

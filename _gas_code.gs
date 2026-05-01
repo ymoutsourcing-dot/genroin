@@ -167,6 +167,7 @@ function doPost(e) {
       case 'aiSuggest':       return jsonResponse(actionAiSuggest(body))
       case 'aiReview':        return jsonResponse(actionAiReview(body))
       case 'aiReviewWithFeedback': return jsonResponse(actionAiReviewWithFeedback(body))
+      case 'aiChat':          return jsonResponse(actionAiChat(body))
       case 'backup':          return jsonResponse(actionBackup(body))
       case 'listBackups':     return jsonResponse(actionListBackups(body))
       case 'restore':         return jsonResponse(actionRestore(body))
@@ -684,6 +685,77 @@ function actionAiReview(body) {
 
 function actionAiReviewWithFeedback(body) {
   return runAiReviewCore(body && body.genroinId, body && body.feedback)
+}
+
+// === AI: 案件「煮詰め」対話 + 仕上げ整形 ===
+// finalize=false → 自由対話（質問返し）
+// finalize=true  → 対話を踏まえて【目的】【手順】【完了条件】 3ブロック整形
+function actionAiChat(body) {
+  const apiKey = getKey('OPENAI_API_KEY')
+  if (!apiKey) throw new Error('OPENAI_API_KEY not set')
+
+  const taskTitle = String((body && body.taskTitle) || '').slice(0, 200)
+  const currentInstruction = String((body && body.currentInstruction) || '').slice(0, 1500)
+  const history = Array.isArray(body && body.history) ? body.history : []
+  const userInput = String((body && body.userInput) || '').slice(0, 800)
+  const finalize = !!(body && body.finalize)
+
+  const systemChat =
+    'あなたは業務設計コンサルです。' +
+    '案件を「実行可能なレベル」まで具体化するための補助をしてください。' +
+    '・曖昧な表現は避ける ・回答は簡潔に（200字以内）' +
+    '・必要なら追加質問する ・余計な前置き禁止'
+
+  const systemFinalize =
+    'あなたは業務設計コンサルです。' +
+    '以下の対話と現在の指示書を踏まえ、案件の指示書を以下フォーマットで出力してください。' +
+    '前置き・後書き禁止。' +
+    '\n\n【目的】\n（1〜2文）\n\n【手順】\n（番号付きまたは箇条書き、3〜7項目）\n\n【完了条件】\n（・で始まる箇条書き、2〜4項目）'
+
+  const contextMsg =
+    '[案件タイトル] ' + taskTitle +
+    '\n\n[現在の指示書]\n' + (currentInstruction || '（未設定）')
+
+  // 直近 6 ターン分（user+assistant 計）に絞る — token 節約
+  const trimmed = history.slice(-6).map(function (m) {
+    return {
+      role: m.role === 'assistant' ? 'assistant' : 'user',
+      content: String(m.content || '').slice(0, 600),
+    }
+  })
+
+  const messages = [
+    { role: 'system', content: finalize ? systemFinalize : systemChat },
+    { role: 'user', content: contextMsg },
+  ].concat(trimmed)
+
+  if (!finalize && userInput) {
+    messages.push({ role: 'user', content: userInput })
+  } else if (finalize) {
+    messages.push({
+      role: 'user',
+      content: '上記の対話と現在の指示書を踏まえ、この案件の最終指示書を【目的】【手順】【完了条件】の3ブロック形式で出力してください。',
+    })
+  }
+
+  const res = UrlFetchApp.fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'post',
+    contentType: 'application/json',
+    muteHttpExceptions: true,
+    headers: { Authorization: 'Bearer ' + apiKey },
+    payload: JSON.stringify({
+      model: MODELS.openai,
+      temperature: finalize ? 0.3 : 0.5,
+      max_tokens: finalize ? 600 : 350,
+      messages: messages,
+    }),
+  })
+  if (res.getResponseCode() !== 200) {
+    throw new Error('OpenAI HTTP ' + res.getResponseCode() + ': ' + res.getContentText().slice(0, 200))
+  }
+  const json = JSON.parse(res.getContentText())
+  const text = (json && json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content) || ''
+  return { ok: true, message: text.trim(), finalize: finalize }
 }
 
 // === AI: 状況進言（GPT文脈分析）===
