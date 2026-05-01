@@ -1184,20 +1184,23 @@ export default function GenroinConsole() {
     }
   }
 
-  // 議題から指示書テンプレを生成
+  // 議題から指示書テンプレを生成（勅命に下す時に使用）
   const buildInstructions = (g) => {
-    const title = String(g['タイトル'] || '')
     const summary = String(g['要約'] || '')
-    // AI審議の「採用理由：」があればそれを「目的」に流用、無ければ要約
+    // AI審議の「採用理由：」があればそれを「目的」に流用、無ければ要約 fallback
     const review = String(g['AI審議コメント'] || '')
     const reasonMatch = review.match(/■\s*採用理由：\s*\n?([\s\S]*?)(?=\n*■|$)/)
     const reason = reasonMatch ? reasonMatch[1].trim() : summary
-    const content = summary || title
     return (
       '【目的】\n' + reason + '\n\n' +
-      '【やること】\n' + content + '\n\n' +
-      '【手順】\n1. 処理整理\n2. 実装\n3. 動作確認\n\n' +
-      '【完了条件】\n・目的達成\n・エラーなし'
+      '【手順】\n' +
+      '1. 推奨アクションを確認する\n' +
+      '2. 必要な作業を実行する\n' +
+      '3. 結果を確認する\n\n' +
+      '【完了条件】\n' +
+      '・目的が達成されている\n' +
+      '・作業結果が確認できる\n' +
+      '・問題があれば再審議できる'
     )
   }
 
@@ -1206,20 +1209,8 @@ export default function GenroinConsole() {
     setGenroinBusyId(id)
     setError('')
     try {
-      if (value === 'Yes') {
-        // Yes 採用 → 指示書生成 + 採用更新 + 案件作成 をまとめて
-        const item = genroinList.find((g) => g['元老院ID'] === id)
-        const instructions = item ? buildInstructions(item) : ''
-        const r = await callGAS('adoptAndCreateTask', {
-          genroinId: id,
-          instructions,
-        })
-        showToast(T('採用→勅命下達: ', '採用→案件作成: ') + r.taskId)
-        if (taskList.length > 0) await loadTaskList()
-      } else {
-        await callGAS('updateGenroin', { genroinId: id, adoption: value })
-        showToast(T('採用可否更新: ', '採用更新: ') + (value || T('未決', '未決定')))
-      }
+      await callGAS('updateGenroin', { genroinId: id, adoption: value })
+      showToast(T('採用可否更新: ', '採用更新: ') + (value || T('未決', '未決定')))
       setAiSuggestion(null)
       await loadGenroinList()
     } catch (e) {
@@ -1279,11 +1270,33 @@ export default function GenroinConsole() {
 
   const handleCreateTask = async (id) => {
     if (genroinBusyId) return
+    const item = genroinList.find((g) => g['元老院ID'] === id)
+    if (!item) {
+      setError('議題が見つかりません: ' + id)
+      return
+    }
+    if (item['採用可否'] !== 'Yes') {
+      setError(T('御採用が必要です（Yes）', '採用Yesに先に設定してください'))
+      return
+    }
     setGenroinBusyId(id)
     setError('')
     try {
-      const r = await callGAS('createTask', { genroinId: id })
-      showToast(T('勅命下達: ', '案件作成: ') + r.taskId)
+      const instructions = buildInstructions(item)
+      const r = await callGAS('createTask', { genroinId: id, instructions })
+      if (r && r.duplicate) {
+        // duplicate 時は error 扱いではなくユーザー向け notice に
+        showToast(
+          T('既に進行中の勅命あり: ', '既に進行中の案件あり: ') +
+            r.existingTaskId,
+        )
+        setError(
+          (r.error || '既に進行中の案件があります') +
+            '（既存: ' + r.existingTaskId + ' / ' + r.existingStatus + '）',
+        )
+      } else {
+        showToast(T('勅命下達: ', '案件作成: ') + r.taskId)
+      }
       setAiSuggestion(null)
       await loadGenroinList()
       if (taskList.length > 0) await loadTaskList()
