@@ -20,9 +20,20 @@ if (typeof fetch !== 'function') {
   process.exit(1)
 }
 
+// agentControl で stop 指令を受けたら、結果書き戻し後に exit するためのフラグ
+let shouldExit = false
+
 // === 実行ハンドラ（type ベース、ALLOWED_COMMANDS と整合）===
 const HANDLERS = {
   ping: async () => ({ exit: 0, log: 'pong' }),
+
+  agentControl: async (payload) => {
+    if (payload.action === 'stop') {
+      shouldExit = true
+      return { exit: 0, log: 'stop signal acknowledged, exiting after this tick' }
+    }
+    throw new Error('agentControl: unknown action: ' + payload.action)
+  },
 
   openApp: async (payload) => {
     // Windows: 全部 `start ""` 経由（cmd の start が常に exit 0 を返す → quirk 回避）
@@ -112,6 +123,10 @@ async function tick() {
     console.error('[agent] tick exception:', (err && err.message) || err)
   } finally {
     busy = false
+  }
+  if (shouldExit) {
+    console.log('[agent] received stop signal — bye')
+    process.exit(0)
   }
 }
 

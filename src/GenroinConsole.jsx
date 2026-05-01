@@ -1661,6 +1661,23 @@ export default function GenroinConsole() {
     }
   }
 
+  // agent 停止指令（UI から OFF）
+  const stopAgent = async () => {
+    if (!window.confirm(T('Agent を停止しますか？再起動はデスクトップショートカットから。', 'Agent を停止しますか？再起動はデスクトップから手動で。'))) return
+    try {
+      await callGAS('enqueueCommand', {
+        type: 'agentControl',
+        payload: { action: 'stop' },
+        sender: 'ui',
+      })
+      showToast(T('停止指令を発令', '停止コマンド送信'))
+      // 即 polling reload で状態反映を早める（5〜10秒で黄、2分で赤）
+      setTimeout(loadAgentStatus, 6000)
+    } catch (e) {
+      showToast(T('停止失敗: ', '停止エラー: ') + (e.message || ''))
+    }
+  }
+
   // 執行盤：プリセット実行（enqueue → 2.5秒後に履歴 reload）
   const runCommand = async (key) => {
     const preset = COMMAND_PRESETS[key]
@@ -2125,6 +2142,27 @@ export default function GenroinConsole() {
               regal={genroinMode}
               onClick={loadAgentStatus}
             />
+            {(agentStatus.label === 'ON' || agentStatus.label === '怪') && (
+              <button
+                type="button"
+                onClick={stopAgent}
+                title={T('Agent 停止指令', 'Agent を停止')}
+                style={{
+                  padding: '4px 10px',
+                  marginRight: 8,
+                  borderRadius: 12,
+                  border: '1px solid #ef4444',
+                  background: genroinMode ? 'rgba(0,0,0,0.35)' : '#ffffff',
+                  color: '#ef4444',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {T('停止', 'OFF')}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setGenroinMode((v) => !v)}
