@@ -1055,6 +1055,15 @@ const COMMAND_PRESETS = {
   build:    { type: 'buildApp', payload: { project: 'genroin' }, label: 'Genroin ビルド', regal: 'Genroin 鋳造', confirm: 'npm run build を実行します（30秒〜1分、dist 上書き）。よろしいですか？' },
 }
 
+// 案件 PC 連携：実行タイプ → command preset へのマッピング（明示的、曖昧マッピング禁止）
+const EXECUTION_TYPES = {
+  none:           { label: 'なし',            preset: null },
+  open_chrome:    { label: 'Chrome 起動',     preset: 'chrome' },
+  open_vscode:    { label: 'VSCode 起動',     preset: 'vscode' },
+  open_explorer:  { label: 'Explorer 起動',   preset: 'explorer' },
+  build_genroin:  { label: 'Genroin ビルド',  preset: 'build' },
+}
+
 async function callGAS(action, body) {
   const res = await fetch(GAS_URL, {
     method: 'POST',
@@ -1518,6 +1527,46 @@ export default function GenroinConsole() {
       showToast(T('御指示書: 写し取り', '指示書: コピー'))
     } catch {
       window.prompt('コピーしてください', text || '')
+    }
+  }
+
+  // 案件 PC連携：実行タイプ変更
+  const updateExecutionType = async (taskId, value) => {
+    try {
+      await callGAS('updateTask', { id: taskId, executionType: value })
+      setTaskList((list) =>
+        list.map((t) =>
+          t['案件ID'] === taskId ? { ...t, '実行タイプ': value } : t,
+        ),
+      )
+      showToast(T('PC連携: 設定', 'PC連携: 設定'))
+    } catch (e) {
+      setError(e?.message || 'PC連携設定失敗')
+    }
+  }
+
+  // 案件 PC連携：実行（明示マッピングのみ、曖昧解釈なし）
+  const runExecution = async (task) => {
+    const exType = String(task['実行タイプ'] || 'none')
+    const def = EXECUTION_TYPES[exType]
+    if (!def || !def.preset) return
+    const preset = COMMAND_PRESETS[def.preset]
+    if (!preset) {
+      showToast('未定義 preset: ' + def.preset)
+      return
+    }
+    if (preset.confirm && !window.confirm(preset.confirm)) return
+    try {
+      const r = await callGAS('enqueueCommand', {
+        type: preset.type,
+        payload: preset.payload,
+        sender: 'task-exec',
+      })
+      showToast(T('発令: ', '送信OK: ') + (r.commandId || ''))
+      // 執行盤の履歴も更新
+      setTimeout(loadCommands, 2500)
+    } catch (e) {
+      showToast(T('発令失敗: ', 'エラー: ') + (e.message || ''))
     }
   }
 
@@ -3313,6 +3362,69 @@ export default function GenroinConsole() {
                               {T('御写し', 'コピー')}
                             </button>
                           </div>
+                        </div>
+                      )
+                    })()}
+                    {/* PC連携セレクタ + 実行ボタン */}
+                    {(() => {
+                      const exType = String(t['実行タイプ'] || 'none')
+                      const canExec = exType !== 'none' && EXECUTION_TYPES[exType]
+                      return (
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            marginTop: 8,
+                            padding: '8px 10px',
+                            borderRadius: 6,
+                            background: genroinMode ? 'rgba(251,191,36,0.05)' : '#f9fafb',
+                            border: '1px dashed ' + (genroinMode ? 'rgba(251,191,36,0.25)' : '#e5e7eb'),
+                            fontSize: 12,
+                          }}
+                        >
+                          <span style={{ opacity: 0.85, whiteSpace: 'nowrap' }}>
+                            {T('🏛 PC連携', '⚡ PC連携')}
+                          </span>
+                          <select
+                            value={exType}
+                            onChange={(e) => updateExecutionType(id, e.target.value)}
+                            style={{
+                              flex: 1,
+                              padding: '4px 8px',
+                              fontSize: 12,
+                              borderRadius: 4,
+                              border: '1px solid ' + (genroinMode ? '#3a2f15' : '#d1d5db'),
+                              background: genroinMode ? '#0d0d0d' : '#ffffff',
+                              color: genroinMode ? '#fbbf24' : '#374151',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {Object.entries(EXECUTION_TYPES).map(([key, v]) => (
+                              <option key={key} value={key}>{v.label}</option>
+                            ))}
+                          </select>
+                          {canExec && (
+                            <button
+                              type="button"
+                              onClick={() => runExecution(t)}
+                              style={{
+                                padding: '4px 12px',
+                                fontSize: 12,
+                                fontWeight: 700,
+                                borderRadius: 4,
+                                border: '1px solid ' + (genroinMode ? '#fbbf24' : '#10b981'),
+                                background: genroinMode
+                                  ? 'linear-gradient(180deg, #fbbf24 0%, #d4a017 100%)'
+                                  : 'linear-gradient(180deg, #10b981 0%, #059669 100%)',
+                                color: genroinMode ? '#0a0a0a' : '#ffffff',
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {T('発令', 'PC 実行')}
+                            </button>
+                          )}
                         </div>
                       )
                     })()}
