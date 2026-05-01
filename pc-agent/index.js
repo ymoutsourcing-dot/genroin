@@ -5,7 +5,35 @@
 require('dotenv').config()
 const { exec } = require('child_process')
 const { promisify } = require('util')
+const path = require('path')
+const fs = require('fs')
 const execP = promisify(exec)
+
+// === 多重起動防止：ロックファイル ===
+const LOCK_FILE = path.join(__dirname, '.agent.lock')
+function acquireLock() {
+  if (fs.existsSync(LOCK_FILE)) {
+    const oldPid = parseInt(fs.readFileSync(LOCK_FILE, 'utf8'), 10) || 0
+    if (oldPid > 0) {
+      try {
+        process.kill(oldPid, 0) // 存在確認のみ
+        console.error('[agent] FATAL: 既に他の agent が起動中 (pid ' + oldPid + ')')
+        console.error('[agent] kill: powershell Stop-Process -Id ' + oldPid + ' -Force')
+        process.exit(1)
+      } catch (_) {
+        console.log('[agent] 古い lock を継承 (旧 pid ' + oldPid + ' は死亡済)')
+      }
+    }
+  }
+  fs.writeFileSync(LOCK_FILE, String(process.pid))
+}
+function releaseLock() {
+  try { fs.unlinkSync(LOCK_FILE) } catch (_) {}
+}
+acquireLock()
+process.on('exit', releaseLock)
+process.on('SIGINT', () => { releaseLock(); process.exit(0) })
+process.on('SIGTERM', () => { releaseLock(); process.exit(0) })
 
 const GAS_URL = process.env.GAS_URL
 const SECRET = process.env.SECRET
